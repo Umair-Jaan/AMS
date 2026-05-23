@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AMS{% endblock %} — Academy Management</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #38bdf8;
+            --accent2: #a78bfa;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --border: #334155;
+            --success: #4ade80;
+            --danger: #f87171;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+        h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+        .subtitle { color: var(--muted); margin-bottom: 2rem; }
+        .messages { list-style: none; margin-bottom: 1rem; }
+        .messages li {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+        }
+        .messages .success { border-color: var(--success); color: var(--success); }
+        .messages .error { border-color: var(--danger); color: var(--danger); }
+        .messages .warning { border-color: #fbbf24; color: #fbbf24; }
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .panel {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .panel:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+        }
+        .panel h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+        .panel p { color: var(--muted); font-size: 0.9rem; }
+        .panel.principal { border-top: 3px solid var(--accent); }
+        .panel.student { border-top: 3px solid var(--accent2); }
+        .register-line {
+            text-align: center;
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+        }
+        .register-line a { color: var(--accent); }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #0f172a;
+            color: var(--text);
+        }
+        input[type="date"] {
+            color-scheme: dark;
+            cursor: pointer;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.8);
+        }
+        button, .btn {
+            display: inline-block;
+            padding: 0.65rem 1.25rem;
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        button:hover, .btn:hover { opacity: 0.9; }
+        .btn-secondary {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+        .btn-row { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; }
+        .readonly-field {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.5rem;
+        }
+        .readonly-field span { color: var(--muted); font-size: 0.8rem; display: block; }
+        .readonly-field strong { font-size: 1rem; }
+        .back { color: var(--muted); text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+        .back:hover { color: var(--accent); }
+        .errorlist { color: var(--danger); list-style: none; margin-bottom: 0.75rem; font-size: 0.85rem; }
+        .student-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .student-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 0.85rem 1rem;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .student-info { font-weight: 600; min-width: 140px; }
+        .student-info small { color: var(--muted); font-weight: 400; margin-left: 0.5rem; }
+        .mini-panels { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .mini-panel {
+            padding: 0.45rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            transition: border-color 0.15s, transform 0.15s;
+        }
+        .mini-panel:hover { transform: translateY(-1px); }
+        .mini-panel.fees { color: #4ade80; border-color: #166534; background: rgba(74, 222, 128, 0.08); }
+        .mini-panel.results { color: #38bdf8; border-color: #0369a1; background: rgba(56, 189, 248, 0.08); }
+        .mini-panel.attendance { color: #a78bfa; border-color: #5b21b6; background: rgba(167, 139, 250, 0.08); }
+        .student-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-paid { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+        .badge-pending { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+        .badge-partial { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

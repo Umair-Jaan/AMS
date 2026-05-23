@@ -1,0 +1,41 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Student Portal{% endblock %}
+
+{% block content %}
+<a href="{% url 'home' %}" class="back">&larr; Back to home</a>
+<h1>Student Portal</h1>
+<p class="subtitle">Enter your academy code and roll number (read-only)</p>
+
+<div class="card" style="max-width: 420px;">
+    <form method="post">
+        {% csrf_token %}
+        <label for="academy_code">Academy code</label>
+        <input type="text" name="academy_code" id="academy_code" value="{{ academy_code }}" required autofocus placeholder="e.g. GPS2026" style="text-transform: uppercase;">
+        <label for="roll_no">Roll number</label>
+        <input type="text" name="roll_no" id="roll_no" value="{{ roll_no }}" required placeholder="e.g. 101">
+        <button type="submit">View Record</button>
+    </form>
+</div>
+
+{% if student %}
+<div class="card">
+    <div class="student-header" style="margin-bottom: 1rem;">
+        <div>
+            <h2>{{ student.name }}</h2>
+            <p class="subtitle" style="margin-bottom: 0;">Roll {{ student.roll_no }} · {{ student.get_class_level_display }}</p>
+        </div>
+        <div class="mini-panels">
+            <a href="{% url 'student_fees_readonly' student.pk %}" class="mini-panel fees">Fees</a>
+            <a href="{% url 'student_results_readonly' student.pk %}" class="mini-panel results">Results</a>
+            <a href="{% url 'student_attendance_readonly' student.pk %}" class="mini-panel attendance">Attendance</a>
+        </div>
+    </div>
+    <div class="readonly-field"><span>Academy</span><strong>{{ student.academy.name }}</strong></div>
+    <div class="readonly-field"><span>Father Name</span><strong>{{ student.father_name|default:"—" }}</strong></div>
+    <div class="readonly-field"><span>Section</span><strong>{{ student.get_gender_display }}{% if student.section %} — {{ student.section }}{% endif %}</strong></div>
+    <div class="readonly-field"><span>Phone</span><strong>{{ student.phone|default:"—" }}</strong></div>
+    <div class="readonly-field"><span>Remarks</span><strong>{{ student.remarks|default:"—" }}</strong></div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Principal Dashboard{% endblock %}
+
+{% block content %}
+<div class="btn-row" style="justify-content: space-between; align-items: center;">
+    <div>
+        <h1>{{ academy.name }}</h1>
+        <p class="subtitle">Academy code: <strong style="color: var(--accent);">{{ academy.code }}</strong> — share with students</p>
+        <p class="subtitle" style="margin-top: -1rem;">Select a class</p>
+    </div>
+    <a href="{% url 'principal_logout' %}" class="btn btn-secondary">Logout</a>
+</div>
+
+<div class="panel-grid">
+    {% for grade in class_levels %}
+    <a href="{% url 'class_gender_select' grade=grade %}" class="panel principal">
+        <h2>Class {{ grade }}</h2>
+        <p>Boys &amp; Girls panels</p>
+    </a>
+    {% endfor %}
+</div>
+{% endblock %}

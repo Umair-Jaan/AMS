@@ -1,0 +1,67 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Results — {{ student.name }}{% endblock %}
+
+{% block content %}
+{% if readonly %}
+<a href="{% url 'student_lookup' %}" class="back">&larr; Student portal</a>
+{% else %}
+<a href="{% url 'class_students' grade=grade gender=gender %}" class="back">&larr; Class list</a>
+{% endif %}
+
+<div class="student-header">
+    <div>
+        <h1>Results — {{ student.name }}</h1>
+        <p class="subtitle">Roll {{ student.roll_no }} · {{ student.get_class_level_display }}</p>
+    </div>
+    {% include 'academy/_student_record_nav.html' %}
+</div>
+
+{% if not readonly %}
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Add result</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% endfor %}
+        <button type="submit">Add Result</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Result sheet</h2>
+    {% if records %}
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Exam date</th>
+                <th>Marks</th>
+                <th>Total</th>
+                <th>%</th>
+                <th>Term</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.subject }}</td>
+                <td>{{ r.exam_date|date:"d M Y"|default:"—" }}</td>
+                <td>{{ r.marks_obtained }}</td>
+                <td>{{ r.total_marks }}</td>
+                <td>{{ r.percentage }}%</td>
+                <td>{{ r.get_term_display }}</td>
+                <td>{{ r.note|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--muted);">No results yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

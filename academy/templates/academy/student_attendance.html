@@ -1,0 +1,63 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Attendance — {{ student.name }}{% endblock %}
+
+{% block content %}
+{% if readonly %}
+<a href="{% url 'student_lookup' %}" class="back">&larr; Student portal</a>
+{% else %}
+<a href="{% url 'class_students' grade=grade gender=gender %}" class="back">&larr; Class list</a>
+{% endif %}
+
+<div class="student-header">
+    <div>
+        <h1>Attendance — {{ student.name }}</h1>
+        <p class="subtitle">Roll {{ student.roll_no }} · {{ student.get_class_level_display }}</p>
+    </div>
+    {% include 'academy/_student_record_nav.html' %}
+</div>
+
+{% if not readonly %}
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Add attendance</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% endfor %}
+        <button type="submit">Add Attendance</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Attendance history</h2>
+    {% if records %}
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Present</th>
+                <th>Total days</th>
+                <th>%</th>
+                <th>Note</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.month }}</td>
+                <td>{{ r.days_present }}</td>
+                <td>{{ r.days_total }}</td>
+                <td>{{ r.percentage }}%</td>
+                <td>{{ r.note|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--muted);">No attendance records yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

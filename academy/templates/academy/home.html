@@ -1,0 +1,23 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>Academy Management System</h1>
+<p class="subtitle">Select your portal</p>
+
+<div class="panel-grid">
+    <a href="{% url 'principal_login' %}" class="panel principal">
+        <h2>Principal / Admin</h2>
+        <p>Manage classes, boys &amp; girls sections</p>
+    </a>
+    <a href="{% url 'student_lookup' %}" class="panel student">
+        <h2>Student</h2>
+        <p>Enter roll number to view your record</p>
+    </a>
+</div>
+
+<p class="register-line">
+    New academy? <a href="{% url 'register_academy' %}">Register new academy</a>
+</p>
+{% endblock %}

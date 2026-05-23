@@ -1,0 +1,20 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Class {{ grade }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'principal_dashboard' %}" class="back">&larr; All classes</a>
+<h1>Class {{ grade }}</h1>
+<p class="subtitle">{{ academy.name }} — choose section</p>
+
+<div class="panel-grid">
+    <a href="{% url 'class_students' grade=grade gender='boys' %}" class="panel principal">
+        <h2>Boys</h2>
+        <p>View &amp; manage boys students</p>
+    </a>
+    <a href="{% url 'class_students' grade=grade gender='girls' %}" class="panel student">
+        <h2>Girls</h2>
+        <p>View &amp; manage girls students</p>
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Principal Login{% endblock %}
+
+{% block content %}
+<a href="{% url 'home' %}" class="back">&larr; Back to home</a>
+<h1>Principal Login</h1>
+<p class="subtitle">Sign in with your academy credentials</p>
+
+<div class="card" style="max-width: 400px;">
+    <form method="post">
+        {% csrf_token %}
+        <label for="username">Username</label>
+        <input type="text" name="username" id="username" required autofocus>
+
+        <label for="password">Password</label>
+        <input type="password" name="password" id="password" required>
+
+        <button type="submit">Login</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Register Academy{% endblock %}
+
+{% block content %}
+<a href="{% url 'home' %}" class="back">&larr; Back to home</a>
+<h1>Register New Academy</h1>
+<p class="subtitle">Create your academy and principal account</p>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+        <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% endfor %}
+
+        <button type="submit">Register Academy</button>
+    </form>
+</div>
+{% endblock %}

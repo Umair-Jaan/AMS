@@ -1,0 +1,46 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Class {{ grade }} — {{ gender_label }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'class_gender_select' grade=grade %}" class="back">&larr; Class {{ grade }}</a>
+<h1>Class {{ grade }} — {{ gender_label }}</h1>
+<p class="subtitle">{{ academy.name }}</p>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Add student</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+        <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% endfor %}
+        <button type="submit">Add Student</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Students ({{ students.count }})</h2>
+    {% if students %}
+    <div class="student-list">
+        {% for s in students %}
+        <div class="student-row">
+            <span class="student-info">
+                {{ s.name }}<small>Roll {{ s.roll_no }}</small>
+            </span>
+            <div class="mini-panels">
+                <a href="{% url 'student_fees' s.pk %}" class="mini-panel fees">Fees</a>
+                <a href="{% url 'student_results' s.pk %}" class="mini-panel results">Results</a>
+                <a href="{% url 'student_attendance' s.pk %}" class="mini-panel attendance">Attendance</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="color: var(--muted);">No students yet. Add one above.</p>
+    {% endif %}
+</div>
+{% endblock %}

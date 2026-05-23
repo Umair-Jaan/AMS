@@ -1,0 +1,11 @@
+<div class="mini-panels">
+    {% if readonly %}
+    <a href="{% url 'student_fees_readonly' student.pk %}" class="mini-panel fees">Fees</a>
+    <a href="{% url 'student_results_readonly' student.pk %}" class="mini-panel results">Results</a>
+    <a href="{% url 'student_attendance_readonly' student.pk %}" class="mini-panel attendance">Attendance</a>
+    {% else %}
+    <a href="{% url 'student_fees' student.pk %}" class="mini-panel fees">Fees</a>
+    <a href="{% url 'student_results' student.pk %}" class="mini-panel results">Results</a>
+    <a href="{% url 'student_attendance' student.pk %}" class="mini-panel attendance">Attendance</a>
+    {% endif %}
+</div>
