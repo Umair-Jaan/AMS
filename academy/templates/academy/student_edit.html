@@ -1,0 +1,26 @@
+{% extends 'academy/base.html' %}
+
+{% block title %}Edit {{ student.name }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'class_students' grade=student.class_level gender=student.gender %}" class="back">&larr; Back to class list</a>
+<h1>Edit Student</h1>
+<p class="subtitle">{{ academy.name }} · Class {{ student.class_level }} · {{ student.get_gender_display }}</p>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+        <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% endfor %}
+        <div class="btn-row">
+            <button type="submit">Save Changes</button>
+            <a href="{% url 'class_students' grade=student.class_level gender=student.gender %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from .forms import (
     AttendanceRecordForm,
@@ -176,12 +177,13 @@ def class_students(request, grade, gender):
 
     if request.method == 'POST':
         form = StudentForm(request.POST)
+        # populate instance fields used by model-level validation so
+        # `validate_unique` can catch duplicates (academy + roll_no)
+        form.instance.academy = academy
+        form.instance.class_level = grade
+        form.instance.gender = gender
         if form.is_valid():
-            student = form.save(commit=False)
-            student.academy = academy
-            student.class_level = grade
-            student.gender = gender
-            student.save()
+            student = form.save()
             messages.success(request, f'Student {student.roll_no} added.')
             return redirect('class_students', grade=grade, gender=gender)
     else:
@@ -195,6 +197,47 @@ def class_students(request, grade, gender):
         'students': students,
         'form': form,
     })
+
+
+@login_required
+def student_edit(request, student_id):
+    academy, student = _get_student_for_principal(request.user, student_id)
+    if not student:
+        return redirect('home')
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Student {student.roll_no} updated.')
+            return redirect(
+                'class_students',
+                grade=student.class_level,
+                gender=student.gender,
+            )
+    else:
+        form = StudentForm(instance=student)
+
+    return render(request, 'academy/student_edit.html', {
+        'form': form,
+        'student': student,
+        'academy': academy,
+    })
+
+
+@login_required
+@require_POST
+def student_delete(request, student_id):
+    academy, student = _get_student_for_principal(request.user, student_id)
+    if not student:
+        return redirect('home')
+
+    grade = student.class_level
+    gender = student.gender
+    roll = student.roll_no
+    student.delete()
+    messages.success(request, f'Student {roll} deleted.')
+    return redirect('class_students', grade=grade, gender=gender)
 
 
 @login_required
@@ -246,21 +289,39 @@ def student_lookup(request):
     student = None
     roll_no = ''
     academy_code = ''
+    class_level = ''
+    gender = ''
 
     if request.method == 'POST':
         roll_no = request.POST.get('roll_no', '').strip()
         academy_code = request.POST.get('academy_code', '').strip().upper()
-        student = Student.objects.filter(
-            roll_no=roll_no,
-            academy__code__iexact=academy_code,
-        ).select_related('academy').first()
-        if student:
-            _grant_student_session(request, student)
+        class_level = request.POST.get('class_level', '').strip()
+        gender = request.POST.get('gender', '').strip()
+
+        if class_level not in {str(g) for g in CLASS_LEVELS}:
+            messages.error(request, 'Please select a valid class.')
+        elif gender not in ('boys', 'girls'):
+            messages.error(request, 'Please select Boys or Girls.')
         else:
-            messages.error(request, 'No student found for this academy code and roll number.')
+            student = Student.objects.filter(
+                roll_no=roll_no,
+                academy__code__iexact=academy_code,
+                class_level=int(class_level),
+                gender=gender,
+            ).select_related('academy').first()
+            if student:
+                _grant_student_session(request, student)
+            else:
+                messages.error(
+                    request,
+                    'No student found. Check academy code, roll, class, and section.',
+                )
 
     return render(request, 'academy/student_lookup.html', {
         'student': student,
         'roll_no': roll_no,
         'academy_code': academy_code,
+        'class_level': class_level,
+        'gender': gender,
+        'class_levels': CLASS_LEVELS,
     })

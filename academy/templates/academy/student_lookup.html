@@ -5,15 +5,32 @@
 {% block content %}
 <a href="{% url 'home' %}" class="back">&larr; Back to home</a>
 <h1>Student Portal</h1>
-<p class="subtitle">Enter your academy code and roll number (read-only)</p>
+<p class="subtitle">Enter academy code, roll number, class, and section (read-only)</p>
 
 <div class="card" style="max-width: 420px;">
     <form method="post">
         {% csrf_token %}
         <label for="academy_code">Academy code</label>
         <input type="text" name="academy_code" id="academy_code" value="{{ academy_code }}" required autofocus placeholder="e.g. GPS2026" style="text-transform: uppercase;">
+
         <label for="roll_no">Roll number</label>
         <input type="text" name="roll_no" id="roll_no" value="{{ roll_no }}" required placeholder="e.g. 101">
+
+        <label for="class_level">Class</label>
+        <select name="class_level" id="class_level" required>
+            <option value="">Select class</option>
+            {% for g in class_levels %}
+            <option value="{{ g }}" {% if class_level == g|stringformat:"s" %}selected{% endif %}>Class {{ g }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="gender">Section</label>
+        <select name="gender" id="gender" required>
+            <option value="">Select section</option>
+            <option value="boys" {% if gender == 'boys' %}selected{% endif %}>Boys</option>
+            <option value="girls" {% if gender == 'girls' %}selected{% endif %}>Girls</option>
+        </select>
+
         <button type="submit">View Record</button>
     </form>
 </div>

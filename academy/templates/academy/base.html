@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="{% static 'academy/favicon.svg' %}">
     <title>{% block title %}AMS{% endblock %} — Academy Management</title>
     <style>
         :root {
@@ -153,6 +155,16 @@
         .mini-panel.fees { color: #4ade80; border-color: #166534; background: rgba(74, 222, 128, 0.08); }
         .mini-panel.results { color: #38bdf8; border-color: #0369a1; background: rgba(56, 189, 248, 0.08); }
         .mini-panel.attendance { color: #a78bfa; border-color: #5b21b6; background: rgba(167, 139, 250, 0.08); }
+        .mini-panel.edit { color: #fbbf24; border-color: #92400e; background: rgba(251, 191, 36, 0.08); }
+        .mini-panel.delete {
+            color: #f87171;
+            border-color: #991b1b;
+            background: rgba(248, 113, 113, 0.08);
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .delete-form { display: inline; margin: 0; }
+        .delete-form button { margin-bottom: 0; }
         .student-header {
             display: flex;
             align-items: center;

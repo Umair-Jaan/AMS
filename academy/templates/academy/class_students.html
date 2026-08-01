@@ -35,6 +35,11 @@
                 <a href="{% url 'student_fees' s.pk %}" class="mini-panel fees">Fees</a>
                 <a href="{% url 'student_results' s.pk %}" class="mini-panel results">Results</a>
                 <a href="{% url 'student_attendance' s.pk %}" class="mini-panel attendance">Attendance</a>
+                <a href="{% url 'student_edit' s.pk %}" class="mini-panel edit">Edit</a>
+                <form method="post" action="{% url 'student_delete' s.pk %}" class="delete-form" onsubmit="return confirm('Delete {{ s.name }} (Roll {{ s.roll_no }})?');">
+                    {% csrf_token %}
+                    <button type="submit" class="mini-panel delete">Delete</button>
+                </form>
             </div>
         </div>
         {% endfor %}
