@@ -48,15 +48,85 @@ class RegisterAcademyForm(forms.Form):
 
 
 class StudentForm(forms.ModelForm):
-    section = forms.ChoiceField(
-        label='Groups',
-        choices=[('', 'Select group')] + Student.GROUP_CHOICES,
-        required=False,
-    )
+    GROUPS_9_10 = [
+        ('Science - Biology', 'Science Group — Biology'),
+        ('Science - Computer', 'Science Group — Computer'),
+        ('General', 'General Group'),
+    ]
+    GROUPS_11_12 = [
+        ('ICS', 'ICS'),
+        ('Medical', 'Medical'),
+        ('Non-Medical', 'Non-Medical'),
+    ]
 
     class Meta:
         model = Student
         fields = ['roll_no', 'name', 'father_name', 'section', 'phone', 'remarks']
+
+    def __init__(self, *args, class_level=None, **kwargs):
+        if class_level is None and 'instance' in kwargs and kwargs['instance'] is not None:
+            class_level = getattr(kwargs['instance'], 'class_level', None)
+        self.class_level = class_level
+        super().__init__(*args, **kwargs)
+
+        if class_level in (9, 10):
+            choices = self.GROUPS_9_10
+        elif class_level in (11, 12):
+            choices = self.GROUPS_11_12
+        else:
+            choices = self.GROUPS_9_10 + self.GROUPS_11_12
+
+        self.fields['section'] = forms.ChoiceField(
+            label='Groups',
+            choices=[('', 'Select group')] + choices,
+            required=True,
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        roll_no = cleaned.get('roll_no', '').strip()
+        name = cleaned.get('name', '').strip()
+        academy = getattr(self.instance, 'academy', None)
+        class_level = getattr(self.instance, 'class_level', None)
+        gender = getattr(self.instance, 'gender', None)
+
+        if academy and class_level is not None and gender:
+            existing_roll = None
+            existing_name = None
+            if roll_no:
+                existing_roll = Student.objects.filter(
+                    academy=academy,
+                    class_level=class_level,
+                    gender=gender,
+                    roll_no__iexact=roll_no,
+                )
+            if name:
+                existing_name = Student.objects.filter(
+                    academy=academy,
+                    class_level=class_level,
+                    gender=gender,
+                    name__iexact=name,
+                )
+            if self.instance.pk:
+                existing_roll = existing_roll.exclude(pk=self.instance.pk) if existing_roll is not None else None
+                existing_name = existing_name.exclude(pk=self.instance.pk) if existing_name is not None else None
+
+            errors = []
+            if existing_roll and existing_roll.exists():
+                errors.append('A student with this roll number already exists in this class and gender.')
+            if existing_name and existing_name.exists():
+                errors.append('A student with this name already exists in this class and gender.')
+            if errors:
+                raise forms.ValidationError(errors)
+
+        return cleaned
+
+    def clean_section(self):
+        section = self.cleaned_data.get('section', '').strip()
+        allowed = [choice[0] for choice in self.GROUPS_9_10 + self.GROUPS_11_12]
+        if section not in allowed:
+            raise forms.ValidationError('Please select a valid group.')
+        return section
 
 
 class FeeRecordForm(forms.ModelForm):

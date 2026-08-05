@@ -7,18 +7,195 @@
 <h1>Class {{ grade }} — {{ gender_label }}</h1>
 <p class="subtitle">{{ academy.name }}</p>
 
-<div class="card">
-    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Add student</h2>
+<details class="panel add-student-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
+    <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
+        <span style="font-size: 1.1rem; font-weight: 600;">Add student</span>
+        <span style="color: var(--accent); font-size: 0.95rem;">Open panel</span>
+    </summary>
+    <div style="margin-top: 1.25rem;">
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% for field in form %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
+            {% endfor %}
+            <button type="submit">Add Student</button>
+        </form>
+    </div>
+</details>
+
+<details class="panel attendance-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
+    <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
+        <span style="font-size: 1.1rem; font-weight: 600;">Attendance</span>
+        <span style="color: var(--accent); font-size: 0.95rem;">Open panel</span>
+    </summary>
     <form method="post">
         {% csrf_token %}
-        {% for field in form %}
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% if field.errors %}
-        <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-        {% endif %}
-        {% endfor %}
-        <button type="submit">Add Student</button>
+        <input type="hidden" name="attendance_action" value="save_attendance" />
+        <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div style="display: grid; gap: 0.75rem; min-width: 260px; max-width: 420px; flex: 1;">
+                <label for="attendance_mode">Attendance type</label>
+                <select id="attendance_mode" name="attendance_mode">
+                    <option value="monthly">Monthly</option>
+                    <option value="daily">Daily</option>
+                </select>
+            </div>
+            <div id="attendance-period-controls" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; flex: 2; min-width: 320px;">
+                <div id="attendance-monthly" style="display: none; min-width: 220px;">
+                    <label for="attendance_month">Select month</label>
+                    <select id="attendance_month" name="attendance_month" style="width: 100%;">
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </div>
+                <div id="attendance-daily" style="display: none; min-width: 220px;">
+                    <label>Current date</label>
+                    <div style="display: grid; gap: 0.75rem;">
+                        <div id="attendance_date_display" style="padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; color: var(--text);">
+                            --
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+                            <button type="button" id="attendance_change_button" class="btn btn-secondary" style="padding: 0.65rem 0.95rem;">Change</button>
+                            <input type="date" id="attendance_date_input" name="attendance_date_input" style="display: none; width: auto;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-left: auto; display: flex; align-items: flex-end;">
+                <button type="button" id="add_attendance_button" style="padding: 0.75rem 1rem;">Add Attendance</button>
+            </div>
+        </div>
+        <div class="card" style="margin: 0; padding: 1rem;">
+            <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Class attendance</h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll number</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
+                            <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Present days</th>
+                            <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Absent days</th>
+                            <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Mark</th>
+                            <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in students %}
+                        <tr>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
+                            <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
+                                <select name="present_{{ s.pk }}" class="monthly-present-select" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);">
+                                    <option value="0">0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                    <option value="11">11</option>
+                                    <option value="12">12</option>
+                                    <option value="13">13</option>
+                                    <option value="14">14</option>
+                                    <option value="15">15</option>
+                                    <option value="16">16</option>
+                                    <option value="17">17</option>
+                                    <option value="18">18</option>
+                                    <option value="19">19</option>
+                                    <option value="20">20</option>
+                                    <option value="21">21</option>
+                                    <option value="22">22</option>
+                                    <option value="23">23</option>
+                                    <option value="24">24</option>
+                                    <option value="25">25</option>
+                                    <option value="26">26</option>
+                                    <option value="27">27</option>
+                                    <option value="28">28</option>
+                                    <option value="29">29</option>
+                                    <option value="30">30</option>
+                                    <option value="31">31</option>
+                                </select>
+                                <div class="monthly-present-display" style="margin-top: 0.5rem; color: #4ade80; font-weight: 700;">0</div>
+                            </td>
+                            <td class="monthly-only monthly-absent-count" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: #f87171; font-weight: 700;">0</td>
+                            <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <input type="hidden" name="status_{{ s.pk }}" value="A" class="status-input" />
+                                <button type="button" class="attendance-toggle present" style="background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">P</button>
+                                <button type="button" class="attendance-toggle absent" style="background: #b91c1c; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">A</button>
+                            </td>
+                            <td class="attendance-status daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">A</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="padding: 0.75rem; color: var(--muted);">No students in this class.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="monthly_totals_controls" style="display: none; margin-top: 1rem; gap: 1.25rem;">
+                <div style="display: grid; gap: 0.75rem; max-width: 200px;">
+                    <label>Days in month</label>
+                    <div id="monthly_days_display" style="padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; color: var(--text); font-weight: 700;">31</div>
+                </div>
+            </div>
+            <div id="daily_totals" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; color: var(--text);">
+                <div style="padding: 1rem; background: rgba(56, 189, 248, 0.08); border: 1px solid var(--border); border-radius: 10px; min-width: 180px;">
+                    <div style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.35rem;">Total present</div>
+                    <div id="attendance_present_total" style="font-size: 1.25rem; font-weight: 700;">0</div>
+                </div>
+                <div style="padding: 1rem; background: rgba(248, 113, 113, 0.08); border: 1px solid var(--border); border-radius: 10px; min-width: 180px;">
+                    <div style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.35rem;">Total absent</div>
+                    <div id="attendance_absent_total" style="font-size: 1.25rem; font-weight: 700;">0</div>
+                </div>
+            </div>
+            <button type="submit" style="margin-top: 1.5rem; width: fit-content;">Save Attendance</button>
+        </div>
+    </form>
+</details>
+
+<div class="card">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Search students</h2>
+    <form method="get" style="display: grid; gap: 1rem;">
+        <div style="display: grid; gap: 0.5rem;">
+            <label for="search_by">Search by</label>
+            <select name="search_by" id="search_by">
+                <option value="roll_no" {% if search_by == 'roll_no' %}selected{% endif %}>With Roll Number</option>
+                <option value="name" {% if search_by == 'name' %}selected{% endif %}>With Name</option>
+            </select>
+        </div>
+        <div style="display: grid; gap: 0.5rem;">
+            <label for="query">Search term</label>
+            <input type="text" name="query" id="query" value="{{ query }}" placeholder="Enter roll number or name">
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="submit">Search</button>
+            <a href="{% url 'class_students' grade=grade gender=gender %}" class="btn btn-secondary">Clear</a>
+        </div>
     </form>
 </div>
 
@@ -48,4 +225,175 @@
     <p style="color: var(--muted);">No students yet. Add one above.</p>
     {% endif %}
 </div>
+
+<script>
+    (function() {
+        const modeSelect = document.getElementById('attendance_mode');
+        const monthlyPanel = document.getElementById('attendance-monthly');
+        const dailyPanel = document.getElementById('attendance-daily');
+        const dateDisplay = document.getElementById('attendance_date_display');
+        const dateInput = document.getElementById('attendance_date_input');
+        const changeButton = document.getElementById('attendance_change_button');
+
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function updateMode() {
+            const mode = modeSelect.value;
+            monthlyPanel.style.display = mode === 'monthly' ? 'block' : 'none';
+            dailyPanel.style.display = mode === 'daily' ? 'block' : 'none';
+            document.getElementById('monthly_totals_controls').style.display = mode === 'monthly' ? 'grid' : 'none';
+            document.getElementById('daily_totals').style.display = mode === 'daily' ? 'flex' : 'none';
+            document.querySelectorAll('.daily-only').forEach(function(el) {
+                el.style.display = mode === 'daily' ? '' : 'none';
+            });
+            document.querySelectorAll('.monthly-only').forEach(function(el) {
+                el.style.display = mode === 'monthly' ? '' : 'none';
+            });
+        }
+
+        function setCurrentDate() {
+            const today = new Date();
+            dateDisplay.textContent = formatDate(today);
+            dateInput.value = today.toISOString().slice(0, 10);
+        }
+
+        modeSelect.addEventListener('change', updateMode);
+        changeButton.addEventListener('click', function() {
+            if (dateInput.style.display === 'none' || !dateInput.style.display) {
+                dateInput.style.display = 'block';
+                dateInput.focus();
+            } else {
+                dateInput.style.display = 'none';
+            }
+        });
+        dateInput.addEventListener('change', function() {
+            if (dateInput.value) {
+                const selectedDate = new Date(dateInput.value);
+                dateDisplay.textContent = formatDate(selectedDate);
+            }
+        });
+
+        function updateTotals() {
+            const rows = document.querySelectorAll('tbody tr');
+            let presentCount = 0;
+            let absentCount = 0;
+            rows.forEach(function(row) {
+                const statusCell = row.querySelector('.attendance-status');
+                if (!statusCell) return;
+                const status = statusCell.textContent.trim();
+                if (status === 'P') {
+                    presentCount += 1;
+                } else if (status === 'A') {
+                    absentCount += 1;
+                }
+            });
+            document.getElementById('attendance_present_total').textContent = presentCount;
+            document.getElementById('attendance_absent_total').textContent = absentCount;
+        }
+
+        function getMonthDays(monthName) {
+            const map = {
+                January: 31,
+                February: 28,
+                March: 31,
+                April: 30,
+                May: 31,
+                June: 30,
+                July: 31,
+                August: 31,
+                September: 30,
+                October: 31,
+                November: 30,
+                December: 31,
+            };
+            return map[monthName] || 31;
+        }
+
+        function updateMonthlySummary() {
+            const month = document.getElementById('attendance_month').value;
+            const days = getMonthDays(month);
+            document.getElementById('monthly_days_display').textContent = days;
+
+            document.querySelectorAll('.monthly-present-select').forEach(function(select) {
+                const row = select.closest('tr');
+                const presentCount = Number(select.value) || 0;
+                const absentCount = Math.max(days - presentCount, 0);
+                const absentCell = row.querySelector('.monthly-absent-count');
+                const presentDisplay = row.querySelector('.monthly-present-display');
+                if (absentCell) {
+                    absentCell.textContent = absentCount;
+                }
+                if (presentDisplay) {
+                    presentDisplay.textContent = presentCount;
+                }
+            });
+        }
+
+        document.getElementById('attendance_month').addEventListener('change', updateMonthlySummary);
+        document.querySelectorAll('.monthly-present-select').forEach(function(select) {
+            select.addEventListener('change', updateMonthlySummary);
+        });
+
+        document.querySelectorAll('.attendance-toggle.present').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const row = button.closest('tr');
+                const statusCell = row.querySelector('.attendance-status');
+                const statusInput = row.querySelector('input.status-input');
+                statusCell.textContent = 'P';
+                statusCell.style.color = '#4ade80';
+                if (statusInput) {
+                    statusInput.value = 'P';
+                }
+                updateTotals();
+            });
+        });
+
+        document.querySelectorAll('.attendance-toggle.absent').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const row = button.closest('tr');
+                const statusCell = row.querySelector('.attendance-status');
+                const statusInput = row.querySelector('input.status-input');
+                statusCell.textContent = 'A';
+                statusCell.style.color = '#f87171';
+                if (statusInput) {
+                    statusInput.value = 'A';
+                }
+                updateTotals();
+            });
+        });
+
+        function resetAttendanceForm() {
+            document.querySelectorAll('.monthly-present-select').forEach(function(select) {
+                select.value = '0';
+            });
+            document.querySelectorAll('.monthly-present-display').forEach(function(display) {
+                display.textContent = '0';
+            });
+            updateMonthlySummary();
+
+            document.querySelectorAll('input.status-input').forEach(function(input) {
+                input.value = 'A';
+            });
+            document.querySelectorAll('.attendance-status').forEach(function(cell) {
+                cell.textContent = 'A';
+                cell.style.color = '#f87171';
+            });
+            updateTotals();
+        }
+
+        document.getElementById('add_attendance_button').addEventListener('click', function() {
+            resetAttendanceForm();
+        });
+
+        setCurrentDate();
+        updateMode();
+        updateMonthlySummary();
+        updateTotals();
+    })();
+</script>
 {% endblock %}

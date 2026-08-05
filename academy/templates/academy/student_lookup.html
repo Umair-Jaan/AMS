@@ -5,7 +5,7 @@
 {% block content %}
 <a href="{% url 'home' %}" class="back">&larr; Back to home</a>
 <h1>Student Portal</h1>
-<p class="subtitle">Enter academy code, roll number, class, and section (read-only)</p>
+<p class="subtitle">Enter academy code, roll number, class, gender, and group</p>
 
 <div class="card" style="max-width: 420px;">
     <form method="post">
@@ -24,16 +24,72 @@
             {% endfor %}
         </select>
 
-        <label for="gender">Section</label>
+        <label for="gender">Gender</label>
         <select name="gender" id="gender" required>
-            <option value="">Select section</option>
+            <option value="">Select gender</option>
             <option value="boys" {% if gender == 'boys' %}selected{% endif %}>Boys</option>
             <option value="girls" {% if gender == 'girls' %}selected{% endif %}>Girls</option>
+        </select>
+
+        <label for="section">Groups</label>
+        <select name="section" id="section" required>
+            <option value="">Select group</option>
         </select>
 
         <button type="submit">View Record</button>
     </form>
 </div>
+
+<script>
+    (function() {
+        const classSelect = document.getElementById('class_level');
+        const sectionSelect = document.getElementById('section');
+        const currentSection = '{{ section|escapejs }}';
+        const optionGroups = {
+            '9': [
+                { value: 'Science - Biology', text: 'Science-Biology' },
+                { value: 'Science - Computer', text: 'Science-Computer' },
+                { value: 'General', text: 'General' }
+            ],
+            '10': [
+                { value: 'Science - Biology', text: 'Science-Biology' },
+                { value: 'Science - Computer', text: 'Science-Computer' },
+                { value: 'General', text: 'General' }
+            ],
+            '11': [
+                { value: 'ICS', text: 'ICS' },
+                { value: 'Medical', text: 'Medical' },
+                { value: 'Non-Medical', text: 'Non-Medical' }
+            ],
+            '12': [
+                { value: 'ICS', text: 'ICS' },
+                { value: 'Medical', text: 'Medical' },
+                { value: 'Non-Medical', text: 'Non-Medical' }
+            ]
+        };
+
+        function populateSectionOptions() {
+            const selectedClass = classSelect.value;
+            const options = optionGroups[selectedClass] || [];
+            sectionSelect.innerHTML = '<option value="">Select group</option>';
+            options.forEach(({ value, text }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = text;
+                if (value === currentSection) {
+                    option.selected = true;
+                }
+                sectionSelect.appendChild(option);
+            });
+        }
+
+        classSelect.addEventListener('change', function() {
+            populateSectionOptions();
+        });
+
+        populateSectionOptions();
+    })();
+</script>
 
 {% if student %}
 <div class="card">
@@ -50,7 +106,8 @@
     </div>
     <div class="readonly-field"><span>Academy</span><strong>{{ student.academy.name }}</strong></div>
     <div class="readonly-field"><span>Father Name</span><strong>{{ student.father_name|default:"—" }}</strong></div>
-    <div class="readonly-field"><span>Section</span><strong>{{ student.get_gender_display }}{% if student.section %} — {{ student.section }}{% endif %}</strong></div>
+    <div class="readonly-field"><span>Gender</span><strong>{{ student.get_gender_display }}</strong></div>
+    <div class="readonly-field"><span>Groups</span><strong>{{ student.section|default:"—" }}</strong></div>
     <div class="readonly-field"><span>Phone</span><strong>{{ student.phone|default:"—" }}</strong></div>
     <div class="readonly-field"><span>Remarks</span><strong>{{ student.remarks|default:"—" }}</strong></div>
 </div>
