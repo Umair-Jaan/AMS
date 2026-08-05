@@ -48,6 +48,12 @@ class RegisterAcademyForm(forms.Form):
 
 
 class StudentForm(forms.ModelForm):
+    section = forms.ChoiceField(
+        label='Groups',
+        choices=[('', 'Select group')] + Student.GROUP_CHOICES,
+        required=False,
+    )
+
     class Meta:
         model = Student
         fields = ['roll_no', 'name', 'father_name', 'section', 'phone', 'remarks']

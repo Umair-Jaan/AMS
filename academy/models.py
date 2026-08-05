@@ -69,7 +69,12 @@ class Student(models.Model):
     father_name = models.CharField(max_length=100, blank=True)
     class_level = models.IntegerField(choices=CLASS_CHOICES)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
-    section = models.CharField(max_length=10, blank=True)
+    GROUP_CHOICES = [
+        ('ICS', 'ICS'),
+        ('Medical', 'Medical'),
+        ('Non-Medical', 'Non-Medical'),
+    ]
+    section = models.CharField(max_length=20, choices=GROUP_CHOICES, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     remarks = models.TextField(blank=True)
 
