@@ -20,14 +20,10 @@
 <div class="card" style="display: grid; gap: 1.5rem;">
     <div style="display: grid; gap: 1rem;">
         <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Daily attendance</h2>
-        <form method="get" style="display: grid; gap: 0.75rem; max-width: 420px;">
-            <label for="attendance_date_input">Select date</label>
-            <input type="date" id="attendance_date_input" name="attendance_date_input" value="{{ attendance_date_input }}" style="width: 100%; padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
-            <button type="submit" style="width: fit-content; padding: 0.75rem 1rem;">Load date</button>
-        </form>
+        {# Date selection removed for session attendance; date is shown per-session entry below. #}
     </div>
 
-    {% if not readonly %}
+    {% if not readonly and not session_entries %}
     <div style="display: grid; gap: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
             <div>
@@ -56,6 +52,40 @@
     </div>
     {% endif %}
 
+    {% if session_entries %}
+    <div style="margin-top: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
+        <h3 style="margin:0 0 0.5rem 0;">Session attendance (saved entries)</h3>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in session_entries %}
+                    <tr>
+                        <td style="white-space: nowrap;">{{ e.student.roll_no }}</td>
+                        <td style="white-space: nowrap;"><small style="color:var(--muted);">{{ e.session.date_label }}</small></td>
+                        <td style="text-align: center;">{{ e.status }}</td>
+                        <td style="width:1px; white-space:nowrap;">
+                            <form method="post" action="{% url 'student_session_entry_delete' student.pk e.pk %}" onsubmit="return confirm('Remove this session entry?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
+                                <button type="submit" class="mini-panel delete">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     {% if not readonly %}
     <div style="display: grid; gap: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
         <h2 style="margin: 0; font-size: 1.1rem;">Add monthly record</h2>
@@ -69,15 +99,27 @@
                     {% endfor %}
                 </ul>
             {% endif %}
-            {% if monthly_form %}
-                {% for field in monthly_form %}
-                    <div style="display: grid; gap: 0.5rem;">
-                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                            <ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>
-                        {% endif %}
+                {% if monthly_form %}
+                    <div style="display: grid; gap: 0.5rem; max-width: 420px;">
+                        <label for="month_select">Select month</label>
+                        <select id="month_select">
+                            {% for m in month_options %}
+                            <option value="{{ m }}">{{ m }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
+                {% for field in monthly_form %}
+                    {% if field.name == 'month' %}
+                        {{ field }}
+                    {% else %}
+                        <div style="display: grid; gap: 0.5rem;">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 {% endfor %}
                 <div style="display: flex; gap: 0.75rem; align-items: center;">
                     <strong>Absent days:</strong>
@@ -131,6 +173,53 @@
 
 <script>
     (function() {
+        const monthSelect = document.getElementById('month_select');
+        if (monthSelect) {
+            monthSelect.addEventListener('change', function() {
+                const val = monthSelect.value;
+                const monthInput = document.querySelector('input[name="month"]');
+                if (monthInput) monthInput.value = val;
+            });
+            // initialize
+            const initEl = document.querySelector('input[name="month"]');
+            if (initEl && monthSelect.options.length) {
+                initEl.value = monthSelect.options[0].value;
+            }
+        }
+    })();
+    (function() {
+        // map of month name -> days provided by view
+        let monthDays = {};
+        try {
+            monthDays = JSON.parse(document.getElementById('month_days_data').textContent);
+        } catch (e) {
+            monthDays = {};
+        }
+
+        const monthSelect = document.getElementById('month_select');
+        const daysTotalInput = document.querySelector('input[name="days_total"]');
+        function setDaysTotalFor(val) {
+            if (!val || !daysTotalInput) return;
+            const monthName = val.split(' ')[0];
+            const days = monthDays[monthName];
+            if (days) daysTotalInput.value = String(days);
+            // trigger absent recalculation if present
+            const ev = new Event('input');
+            daysTotalInput.dispatchEvent(ev);
+        }
+
+        if (monthSelect) {
+            monthSelect.addEventListener('change', function() {
+                setDaysTotalFor(monthSelect.value);
+                const monthInput = document.querySelector('input[name="month"]');
+                if (monthInput) monthInput.value = monthSelect.value;
+            });
+            if (monthSelect.options.length) {
+                setDaysTotalFor(monthSelect.options[0].value);
+            }
+        }
+    })();
+    (function() {
         const presentButton = document.getElementById('daily_present_button');
         const absentButton = document.getElementById('daily_absent_button');
         const statusInput = document.getElementById('daily_attendance_status');
@@ -175,3 +264,5 @@
     })();
 </script>
 {% endblock %}
+
+<template id="month_days_data">{{ month_days_json|safe }}</template>

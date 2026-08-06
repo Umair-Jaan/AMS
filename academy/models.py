@@ -208,6 +208,9 @@ class AttendanceSessionEntry(models.Model):
 
     class Meta:
         ordering = ['student__roll_no']
+        constraints = [
+            models.UniqueConstraint(fields=['session', 'student'], name='unique_session_student')
+        ]
 
     def __str__(self):
         return f'{self.student.roll_no} — {self.status} @ {self.session.date_label}'

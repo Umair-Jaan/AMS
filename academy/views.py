@@ -17,6 +17,7 @@ from .forms import (
     ResultRecordForm,
     StudentForm,
 )
+from django.forms.widgets import HiddenInput
 from .models import (
     Academy,
     AttendanceRecord,
@@ -190,6 +191,12 @@ def _student_attendance_view(request, student_id, readonly=False):
     ).first()
     daily_status = 'P' if daily_record and daily_record.days_present else 'A'
     monthly_form = None if readonly else AttendanceRecordForm()
+    if monthly_form:
+        # Render the month field as hidden; month will be selected by the dropdown
+        try:
+            monthly_form.fields['month'].widget = HiddenInput()
+        except Exception:
+            pass
 
     if not readonly and request.method == 'POST':
         action = request.POST.get('attendance_action')
@@ -219,6 +226,10 @@ def _student_attendance_view(request, student_id, readonly=False):
 
         if action == 'save_monthly':
             monthly_form = AttendanceRecordForm(request.POST)
+            try:
+                monthly_form.fields['month'].widget = HiddenInput()
+            except Exception:
+                pass
             if monthly_form.is_valid():
                 record = monthly_form.save(commit=False)
                 record.student = student
@@ -227,6 +238,17 @@ def _student_attendance_view(request, student_id, readonly=False):
                 return redirect('student_attendance', student_id=student_id)
 
     records = student.attendance_records.all()
+
+    # Fetch session entries for this student/date (class session snapshots)
+    session_entries = AttendanceSessionEntry.objects.filter(
+        student=student,
+        session__date_label=attendance_date_label,
+    ).select_related('session').order_by('session__created_at')
+
+    # Month dropdown options for monthly attendance (e.g. "January 2026")
+    current_year = date.today().year
+    month_options = [f"{m} {current_year}" for m in MONTH_DAYS.keys()]
+    month_days_json = json.dumps(MONTH_DAYS)
 
     return render(request, 'academy/student_attendance.html', {
         'student': student,
@@ -240,6 +262,9 @@ def _student_attendance_view(request, student_id, readonly=False):
         'daily_record': daily_record,
         'daily_status': daily_status,
         'monthly_form': monthly_form,
+        'session_entries': session_entries,
+        'month_options': month_options,
+        'month_days_json': month_days_json,
     })
 
 
@@ -359,15 +384,19 @@ def class_students(request, grade, gender):
                 date_label=record_label,
             )
 
-            # Create entries for each student (append). This preserves student-specific
-            # AttendanceRecord history separately; session entries are a class-level snapshot.
+            # Remove any existing entries for this session so saving is idempotent
+            # (prevents duplicate rows when saving multiple times).
+            session.entries.all().delete()
+
             for student in students:
-                status = request.POST.get(f'status_{student.pk}', 'A')
-                AttendanceSessionEntry.objects.create(
-                    session=session,
-                    student=student,
-                    status=status,
-                )
+                status = request.POST.get(f'status_{student.pk}', '').strip()
+                # Only create entries for students who were explicitly marked
+                if status in ('P', 'A'):
+                    AttendanceSessionEntry.objects.create(
+                        session=session,
+                        student=student,
+                        status=status,
+                    )
 
             messages.success(request, 'Session attendance saved.')
             query_string = urlencode({
@@ -395,19 +424,9 @@ def class_students(request, grade, gender):
         attendance_date_input,
     )
 
-    # Fetch session entries for selected date (if any)
-    session_entries = []
-    try:
-        session = AttendanceSession.objects.filter(
-            academy=academy,
-            grade=grade,
-            gender=gender,
-            date_label=_format_display_date(attendance_date_input),
-        ).first()
-        if session:
-            session_entries = session.entries.select_related('student').all()
-    except Exception:
-        session_entries = []
+    # class page should not display saved session entries; sessions are
+    # displayed on the individual student's attendance page instead.
+    session_entries = None
 
     return render(request, 'academy/class_students.html', {
         'academy': academy,
@@ -544,6 +563,33 @@ def class_session_entry_delete(request, grade, gender, entry_id):
         query_string = urlencode({'attendance_date_input': attendance_date_input})
         return redirect(f'{reverse("class_students", kwargs={"grade": grade, "gender": gender})}?{query_string}')
     return redirect('class_students', grade=grade, gender=gender)
+
+
+@login_required
+@require_POST
+def student_session_entry_delete(request, student_id, entry_id):
+    # Delete a session attendance entry from the student attendance page.
+    academy, student = _get_student_for_principal(request.user, student_id)
+    if not student:
+        return redirect('home')
+
+    try:
+        entry = AttendanceSessionEntry.objects.get(pk=entry_id, student=student)
+    except AttendanceSessionEntry.DoesNotExist:
+        messages.error(request, 'Session entry not found.')
+        return redirect('student_attendance', student_id=student_id)
+
+    # Ensure the session belongs to this academy
+    if entry.session.academy != academy:
+        return redirect('home')
+
+    entry.delete()
+    messages.success(request, 'Session attendance entry removed.')
+    attendance_date_input = request.POST.get('attendance_date_input', '')
+    if attendance_date_input:
+        query_string = urlencode({'attendance_date_input': attendance_date_input})
+        return redirect(f'{reverse("student_attendance", kwargs={"student_id": student_id})}?{query_string}')
+    return redirect('student_attendance', student_id=student_id)
 
 
 def student_fees_readonly(request, student_id):

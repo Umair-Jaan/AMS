@@ -66,11 +66,11 @@
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <input type="hidden" name="status_{{ s.pk }}" value="A" class="status-input" />
+                                <input type="hidden" name="status_{{ s.pk }}" value="" class="status-input" />
                                 <button type="button" class="attendance-toggle present" style="background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">P</button>
                                 <button type="button" class="attendance-toggle absent" style="background: #b91c1c; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">A</button>
                             </td>
-                            <td class="attendance-status" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">A</td>
+                            <td class="attendance-status" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);"></td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -98,39 +98,7 @@
     </form>
 </details>
 
-{% if session_entries %}
-<div class="card" style="margin-top: 1rem;">
-    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Saved session attendance — {{ attendance_date_display }}</h2>
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Remove</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for e in session_entries %}
-                <tr>
-                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.student.roll_no }}</td>
-                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.student.name }}</td>
-                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.status }}</td>
-                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
-                        <form method="post" action="{% url 'class_session_entry_delete' grade=grade gender=gender entry_id=e.pk %}" onsubmit="return confirm('Remove this entry?');">
-                            {% csrf_token %}
-                            <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
-                            <button type="submit" class="mini-panel delete">Remove</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
+{# Session entries are intentionally not shown on the class page. #}
 
 <div class="card">
     <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Search students</h2>
@@ -202,30 +170,8 @@
             document.getElementById('attendance_absent_total').textContent = absentCount;
         }
 
-        function applyAttendanceValues() {
-            let savedValues = {};
-            try {
-                savedValues = JSON.parse(document.getElementById('attendance_values_data').textContent);
-            } catch (err) {
-                savedValues = {};
-            }
-
-            document.querySelectorAll('tbody tr[data-student-id]').forEach(function(row) {
-                const studentId = row.dataset.studentId;
-                const values = savedValues[studentId] || {};
-                const status = values.status || 'A';
-                const statusCell = row.querySelector('.attendance-status');
-                const statusInput = row.querySelector('input.status-input');
-                if (statusCell) {
-                    statusCell.textContent = status;
-                    statusCell.style.color = status === 'P' ? '#4ade80' : '#f87171';
-                }
-                if (statusInput) {
-                    statusInput.value = status;
-                }
-            });
-            updateTotals();
-        }
+        // Intentionally do not apply saved attendance values to live class page.
+        // Status cells start empty until a user presses P or A.
 
         document.querySelectorAll('.attendance-toggle.present').forEach(function(button) {
             button.addEventListener('click', function() {
@@ -259,7 +205,8 @@
             });
         });
 
-        applyAttendanceValues();
+        // No initial application of saved values; keep live status empty.
+        updateTotals();
     })();
 </script>
 {% endblock %}
