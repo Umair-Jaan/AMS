@@ -56,6 +56,11 @@ urlpatterns = [
         name='student_attendance_record_delete',
     ),
     path(
+        'principal/class/<int:grade>/<str:gender>/session_entry/<int:entry_id>/delete/',
+        views.class_session_entry_delete,
+        name='class_session_entry_delete',
+    ),
+    path(
         'student/record/<int:student_id>/fees/',
         views.student_fees_readonly,
         name='student_fees_readonly',

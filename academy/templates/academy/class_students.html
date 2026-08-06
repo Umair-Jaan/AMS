@@ -42,38 +42,11 @@
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="attendance_action" value="save_attendance" />
-        <input type="hidden" id="attendance_open_input" name="attendance_open" value="{% if attendance_open %}1{% else %}0{% endif %}" />
         <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <div style="display: grid; gap: 0.75rem; min-width: 260px; max-width: 420px; flex: 1;">
-                <label for="attendance_mode">Attendance type</label>
-                <select id="attendance_mode" name="attendance_mode">
-                    <option value="monthly" {% if attendance_mode == 'monthly' %}selected{% endif %}>Monthly</option>
-                    <option value="daily" {% if attendance_mode == 'daily' %}selected{% endif %}>Daily</option>
-                </select>
+                <label for="attendance_date_input">Date</label>
+                <input type="date" id="attendance_date_input" name="attendance_date_input" value="{{ attendance_date_input }}" style="width: 100%; padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
             </div>
-            <div id="attendance-period-controls" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; flex: 2; min-width: 320px;">
-                <div id="attendance-monthly" style="display: none; min-width: 220px;">
-                    <label for="attendance_month">Select month</label>
-                    <select id="attendance_month" name="attendance_month" style="width: 100%;">
-                        {% for month in attendance_months %}
-                        <option value="{{ month }}" {% if attendance_month == month %}selected{% endif %}>{{ month }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div id="attendance-daily" style="display: none; min-width: 220px;">
-                    <label>Current date</label>
-                    <div style="display: grid; gap: 0.75rem;">
-                        <div id="attendance_date_display" style="padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; color: var(--text);">
-                            {{ attendance_date_display }}
-                        </div>
-                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-                            <button type="button" id="attendance_change_button" class="btn btn-secondary" style="padding: 0.65rem 0.95rem;">Change</button>
-                            <input type="date" id="attendance_date_input" name="attendance_date_input" value="{{ attendance_date_input }}" style="display: none; width: auto;" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div style="margin-left: auto; display: flex; align-items: flex-end;"></div>
         </div>
         <div class="card" style="margin: 0; padding: 1rem;">
             <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Class attendance</h2>
@@ -83,10 +56,8 @@
                         <tr>
                             <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll number</th>
                             <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
-                            <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Present days</th>
-                            <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Absent days</th>
-                            <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Mark</th>
-                            <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Mark</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -94,64 +65,20 @@
                         <tr data-student-id="{{ s.pk }}">
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
-                            <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
-                                <select name="present_{{ s.pk }}" class="monthly-present-select" style="width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);">
-                                    <option value="0">0</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                    <option value="6">6</option>
-                                    <option value="7">7</option>
-                                    <option value="8">8</option>
-                                    <option value="9">9</option>
-                                    <option value="10">10</option>
-                                    <option value="11">11</option>
-                                    <option value="12">12</option>
-                                    <option value="13">13</option>
-                                    <option value="14">14</option>
-                                    <option value="15">15</option>
-                                    <option value="16">16</option>
-                                    <option value="17">17</option>
-                                    <option value="18">18</option>
-                                    <option value="19">19</option>
-                                    <option value="20">20</option>
-                                    <option value="21">21</option>
-                                    <option value="22">22</option>
-                                    <option value="23">23</option>
-                                    <option value="24">24</option>
-                                    <option value="25">25</option>
-                                    <option value="26">26</option>
-                                    <option value="27">27</option>
-                                    <option value="28">28</option>
-                                    <option value="29">29</option>
-                                    <option value="30">30</option>
-                                    <option value="31">31</option>
-                                </select>
-                                <div class="monthly-present-display" style="margin-top: 0.5rem; color: #4ade80; font-weight: 700;">0</div>
-                            </td>
-                            <td class="monthly-only monthly-absent-count" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: #f87171; font-weight: 700;">0</td>
-                            <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <td style="padding: 0.75rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                 <input type="hidden" name="status_{{ s.pk }}" value="A" class="status-input" />
                                 <button type="button" class="attendance-toggle present" style="background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">P</button>
                                 <button type="button" class="attendance-toggle absent" style="background: #b91c1c; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;">A</button>
                             </td>
-                            <td class="attendance-status daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">A</td>
+                            <td class="attendance-status" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">A</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" style="padding: 0.75rem; color: var(--muted);">No students in this class.</td>
+                            <td colspan="4" style="padding: 0.75rem; color: var(--muted);">No students in this class.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-            <div id="monthly_totals_controls" style="display: none; margin-top: 1rem; gap: 1.25rem;">
-                <div style="display: grid; gap: 0.75rem; max-width: 200px;">
-                    <label>Days in month</label>
-                    <div id="monthly_days_display" style="padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; color: var(--text); font-weight: 700;">31</div>
-                </div>
             </div>
             <div id="daily_totals" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; color: var(--text);">
                 <div style="padding: 1rem; background: rgba(56, 189, 248, 0.08); border: 1px solid var(--border); border-radius: 10px; min-width: 180px;">
@@ -163,41 +90,47 @@
                     <div id="attendance_absent_total" style="font-size: 1.25rem; font-weight: 700;">0</div>
                 </div>
             </div>
-            <button type="submit" style="margin-top: 1.5rem; width: fit-content;">Save Attendance</button>
-            <div style="height: 2rem;"></div>
-            <div id="new_attendance_sheet" class="card" style="display: none; padding: 1rem;">
-                <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">New attendance sheet</h2>
-                <p id="new_attendance_sheet_meta" style="margin-bottom: 1rem; color: var(--muted);">A new attendance sheet has been created for the selected date or month. Fill the fields above and click Save Attendance to preserve it.</p>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>
-                                <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll number</th>
-                                <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
-                                <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Present</th>
-                                <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Absent</th>
-                                <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Mark</th>
-                                <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for s in students %}
-                            <tr>
-                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
-                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
-                                <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
-                                <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
-                                <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
-                                <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            </div>
+            <div style="margin-top: 1rem;">
+                <button type="submit" style="padding: 0.75rem 1rem;">Save Session Attendance</button>
             </div>
         </div>
     </form>
 </details>
+
+{% if session_entries %}
+<div class="card" style="margin-top: 1rem;">
+    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Saved session attendance — {{ attendance_date_display }}</h2>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Remove</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in session_entries %}
+                <tr>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.student.roll_no }}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.student.name }}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ e.status }}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
+                        <form method="post" action="{% url 'class_session_entry_delete' grade=grade gender=gender entry_id=e.pk %}" onsubmit="return confirm('Remove this entry?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
+                            <button type="submit" class="mini-panel delete">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <div class="card">
     <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Search students</h2>
@@ -251,58 +184,8 @@
 
 <script>
     (function() {
-        const modeSelect = document.getElementById('attendance_mode');
-        const monthlyPanel = document.getElementById('attendance-monthly');
-        const dailyPanel = document.getElementById('attendance-daily');
-        const dateDisplay = document.getElementById('attendance_date_display');
-        const dateInput = document.getElementById('attendance_date_input');
-        const changeButton = document.getElementById('attendance_change_button');
-
-        function formatDate(date) {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = date.getFullYear();
-            return `${day}/${month}/${year}`;
-        }
-
-        function updateMode() {
-            const mode = modeSelect.value;
-            monthlyPanel.style.display = mode === 'monthly' ? 'block' : 'none';
-            dailyPanel.style.display = mode === 'daily' ? 'block' : 'none';
-            document.getElementById('monthly_totals_controls').style.display = mode === 'monthly' ? 'grid' : 'none';
-            document.getElementById('daily_totals').style.display = mode === 'daily' ? 'flex' : 'none';
-            document.querySelectorAll('.daily-only').forEach(function(el) {
-                el.style.display = mode === 'daily' ? '' : 'none';
-            });
-            document.querySelectorAll('.monthly-only').forEach(function(el) {
-                el.style.display = mode === 'monthly' ? '' : 'none';
-            });
-        }
-
-        function setCurrentDate() {
-            const today = new Date();
-            dateDisplay.textContent = formatDate(today);
-            dateInput.value = today.toISOString().slice(0, 10);
-        }
-
-        modeSelect.addEventListener('change', updateMode);
-        changeButton.addEventListener('click', function() {
-            if (dateInput.style.display === 'none' || !dateInput.style.display) {
-                dateInput.style.display = 'block';
-                dateInput.focus();
-            } else {
-                dateInput.style.display = 'none';
-            }
-        });
-        dateInput.addEventListener('change', function() {
-            if (dateInput.value) {
-                const selectedDate = new Date(dateInput.value);
-                dateDisplay.textContent = formatDate(selectedDate);
-            }
-        });
-
         function updateTotals() {
-            const rows = document.querySelectorAll('tbody tr');
+            const rows = document.querySelectorAll('tbody tr[data-student-id]');
             let presentCount = 0;
             let absentCount = 0;
             rows.forEach(function(row) {
@@ -319,77 +202,6 @@
             document.getElementById('attendance_absent_total').textContent = absentCount;
         }
 
-        function getMonthDays(monthName) {
-            const map = {
-                January: 31,
-                February: 28,
-                March: 31,
-                April: 30,
-                May: 31,
-                June: 30,
-                July: 31,
-                August: 31,
-                September: 30,
-                October: 31,
-                November: 30,
-                December: 31,
-            };
-            return map[monthName] || 31;
-        }
-
-        function updateMonthlySummary() {
-            const month = document.getElementById('attendance_month').value;
-            const days = getMonthDays(month);
-            document.getElementById('monthly_days_display').textContent = days;
-
-            document.querySelectorAll('.monthly-present-select').forEach(function(select) {
-                const row = select.closest('tr');
-                const presentCount = Number(select.value) || 0;
-                const absentCount = Math.max(days - presentCount, 0);
-                const absentCell = row.querySelector('.monthly-absent-count');
-                const presentDisplay = row.querySelector('.monthly-present-display');
-                if (absentCell) {
-                    absentCell.textContent = absentCount;
-                }
-                if (presentDisplay) {
-                    presentDisplay.textContent = presentCount;
-                }
-            });
-        }
-
-        document.getElementById('attendance_month').addEventListener('change', updateMonthlySummary);
-        document.querySelectorAll('.monthly-present-select').forEach(function(select) {
-            select.addEventListener('change', updateMonthlySummary);
-        });
-
-        document.querySelectorAll('.attendance-toggle.present').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const row = button.closest('tr');
-                const statusCell = row.querySelector('.attendance-status');
-                const statusInput = row.querySelector('input.status-input');
-                statusCell.textContent = 'P';
-                statusCell.style.color = '#4ade80';
-                if (statusInput) {
-                    statusInput.value = 'P';
-                }
-                updateTotals();
-            });
-        });
-
-        document.querySelectorAll('.attendance-toggle.absent').forEach(function(button) {
-            button.addEventListener('click', function() {
-                const row = button.closest('tr');
-                const statusCell = row.querySelector('.attendance-status');
-                const statusInput = row.querySelector('input.status-input');
-                statusCell.textContent = 'A';
-                statusCell.style.color = '#f87171';
-                if (statusInput) {
-                    statusInput.value = 'A';
-                }
-                updateTotals();
-            });
-        });
-
         function applyAttendanceValues() {
             let savedValues = {};
             try {
@@ -402,8 +214,6 @@
                 const studentId = row.dataset.studentId;
                 const values = savedValues[studentId] || {};
                 const status = values.status || 'A';
-                const present = values.days_present != null ? values.days_present : 0;
-
                 const statusCell = row.querySelector('.attendance-status');
                 const statusInput = row.querySelector('input.status-input');
                 if (statusCell) {
@@ -413,90 +223,43 @@
                 if (statusInput) {
                     statusInput.value = status;
                 }
-
-                const presentSelect = row.querySelector('.monthly-present-select');
-                const presentDisplay = row.querySelector('.monthly-present-display');
-                const absentCell = row.querySelector('.monthly-absent-count');
-                const days = getMonthDays(document.getElementById('attendance_month').value);
-                if (presentSelect) {
-                    presentSelect.value = String(present);
-                }
-                if (presentDisplay) {
-                    presentDisplay.textContent = String(present);
-                }
-                if (absentCell) {
-                    const absent = Math.max(days - Number(present), 0);
-                    absentCell.textContent = String(absent);
-                }
             });
             updateTotals();
         }
 
-        function resetAttendanceForm() {
-            document.querySelectorAll('.monthly-present-select').forEach(function(select) {
-                select.value = '0';
-            });
-            document.querySelectorAll('.monthly-present-display').forEach(function(display) {
-                display.textContent = '0';
-            });
-            updateMonthlySummary();
-
-            document.querySelectorAll('input.status-input').forEach(function(input) {
-                input.value = 'A';
-            });
-            document.querySelectorAll('.attendance-status').forEach(function(cell) {
-                cell.textContent = 'A';
-                cell.style.color = '#f87171';
-            });
-            updateTotals();
-        }
-
-        const newAttendanceSheet = document.getElementById('new_attendance_sheet');
-        const attendanceOpenInput = document.getElementById('attendance_open_input');
-        const newAttendanceSheetMeta = document.getElementById('new_attendance_sheet_meta');
-
-        function showNewAttendanceSheet() {
-            newAttendanceSheet.style.display = '';
-            attendanceOpenInput.value = '1';
-            const mode = modeSelect.value;
-            if (mode === 'daily') {
-                newAttendanceSheetMeta.textContent = 'A new attendance sheet has been created for ' + dateDisplay.textContent + '. Fill the fields above and click Save Attendance to preserve it.';
-            } else {
-                newAttendanceSheetMeta.textContent = 'A new attendance sheet has been created for ' + document.getElementById('attendance_month').value + '. Fill the fields above and click Save Attendance to preserve it.';
-            }
-        }
-
-        const addAttendanceButton = document.getElementById('add_attendance_button');
-        if (addAttendanceButton) {
-            addAttendanceButton.addEventListener('click', function() {
-                resetAttendanceForm();
-                if (modeSelect.value === 'daily') {
-                    const today = new Date();
-                    dateDisplay.textContent = formatDate(today);
-                    dateInput.value = today.toISOString().slice(0, 10);
+        document.querySelectorAll('.attendance-toggle.present').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const row = button.closest('tr');
+                const statusCell = row.querySelector('.attendance-status');
+                const statusInput = row.querySelector('input.status-input');
+                if (statusCell) {
+                    statusCell.textContent = 'P';
+                    statusCell.style.color = '#4ade80';
                 }
-                showNewAttendanceSheet();
-            });
-        }
-
-        function initializeDateDisplay() {
-            if (dateInput.value) {
-                const selectedDate = new Date(dateInput.value);
-                if (!isNaN(selectedDate.getTime())) {
-                    dateDisplay.textContent = formatDate(selectedDate);
-                    return;
+                if (statusInput) {
+                    statusInput.value = 'P';
                 }
-            }
-            setCurrentDate();
-        }
+                updateTotals();
+            });
+        });
 
-        initializeDateDisplay();
-        updateMode();
-        updateMonthlySummary();
+        document.querySelectorAll('.attendance-toggle.absent').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const row = button.closest('tr');
+                const statusCell = row.querySelector('.attendance-status');
+                const statusInput = row.querySelector('input.status-input');
+                if (statusCell) {
+                    statusCell.textContent = 'A';
+                    statusCell.style.color = '#f87171';
+                }
+                if (statusInput) {
+                    statusInput.value = 'A';
+                }
+                updateTotals();
+            });
+        });
+
         applyAttendanceValues();
-        if ({% if attendance_open %}true{% else %}false{% endif %}) {
-            showNewAttendanceSheet();
-        }
     })();
 </script>
 {% endblock %}

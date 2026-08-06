@@ -17,7 +17,16 @@ from .forms import (
     ResultRecordForm,
     StudentForm,
 )
-from .models import Academy, AttendanceRecord, FeeRecord, PrincipalProfile, ResultRecord, Student
+from .models import (
+    Academy,
+    AttendanceRecord,
+    AttendanceSession,
+    AttendanceSessionEntry,
+    FeeRecord,
+    PrincipalProfile,
+    ResultRecord,
+    Student,
+)
 
 CLASS_LEVELS = [9, 10, 11, 12]
 STUDENT_SESSION_KEY = 'student_access_id'
@@ -342,22 +351,25 @@ def class_students(request, grade, gender):
             except (TypeError, ValueError):
                 record_label = date.today().strftime('%d/%m/%Y')
                 attendance_date = date.today().isoformat()
+            # Save this class session as a Session object and create per-student entries
+            session, created = AttendanceSession.objects.get_or_create(
+                academy=academy,
+                grade=grade,
+                gender=gender,
+                date_label=record_label,
+            )
 
+            # Create entries for each student (append). This preserves student-specific
+            # AttendanceRecord history separately; session entries are a class-level snapshot.
             for student in students:
                 status = request.POST.get(f'status_{student.pk}', 'A')
-                days_present = 1 if status == 'P' else 0
-                days_total = 1
-
-                AttendanceRecord.objects.update_or_create(
+                AttendanceSessionEntry.objects.create(
+                    session=session,
                     student=student,
-                    month=record_label,
-                    defaults={
-                        'days_present': days_present,
-                        'days_total': days_total,
-                    },
+                    status=status,
                 )
 
-            messages.success(request, 'Attendance saved for all students.')
+            messages.success(request, 'Session attendance saved.')
             query_string = urlencode({
                 'attendance_date_input': attendance_date,
             })
@@ -383,6 +395,20 @@ def class_students(request, grade, gender):
         attendance_date_input,
     )
 
+    # Fetch session entries for selected date (if any)
+    session_entries = []
+    try:
+        session = AttendanceSession.objects.filter(
+            academy=academy,
+            grade=grade,
+            gender=gender,
+            date_label=_format_display_date(attendance_date_input),
+        ).first()
+        if session:
+            session_entries = session.entries.select_related('student').all()
+    except Exception:
+        session_entries = []
+
     return render(request, 'academy/class_students.html', {
         'academy': academy,
         'grade': grade,
@@ -395,6 +421,7 @@ def class_students(request, grade, gender):
         'attendance_date_input': attendance_date_input,
         'attendance_date_display': _format_display_date(attendance_date_input),
         'attendance_values_json': json.dumps(attendance_values),
+        'session_entries': session_entries,
     })
 
 
@@ -495,6 +522,28 @@ def student_attendance_record_delete(request, student_id, record_id):
 
 def student_attendance_readonly(request, student_id):
     return _student_attendance_view(request, student_id, readonly=True)
+
+
+@login_required
+@require_POST
+def class_session_entry_delete(request, grade, gender, entry_id):
+    try:
+        entry = AttendanceSessionEntry.objects.select_related('session', 'student').get(pk=entry_id)
+    except AttendanceSessionEntry.DoesNotExist:
+        messages.error(request, 'Session entry not found.')
+        return redirect('class_students', grade=grade, gender=gender)
+
+    academy = _get_principal_academy(request.user)
+    if not academy or entry.session.academy != academy:
+        return redirect('home')
+
+    entry.delete()
+    messages.success(request, 'Session attendance entry removed.')
+    attendance_date_input = request.POST.get('attendance_date_input', '')
+    if attendance_date_input:
+        query_string = urlencode({'attendance_date_input': attendance_date_input})
+        return redirect(f'{reverse("class_students", kwargs={"grade": grade, "gender": gender})}?{query_string}')
+    return redirect('class_students', grade=grade, gender=gender)
 
 
 def student_fees_readonly(request, student_id):

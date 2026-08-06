@@ -172,3 +172,42 @@ class AttendanceRecord(models.Model):
 
     def __str__(self):
         return f'{self.student.roll_no} — {self.month}'
+
+
+class AttendanceSession(models.Model):
+    academy = models.ForeignKey(
+        Academy,
+        on_delete=models.CASCADE,
+        related_name='attendance_sessions',
+    )
+    grade = models.IntegerField()
+    gender = models.CharField(max_length=10)
+    date_label = models.CharField(max_length=30, help_text='e.g. 05/08/2026')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.academy.name} — {self.grade} {self.gender} — {self.date_label}'
+
+
+class AttendanceSessionEntry(models.Model):
+    session = models.ForeignKey(
+        AttendanceSession,
+        on_delete=models.CASCADE,
+        related_name='entries',
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name='session_attendance_entries',
+    )
+    status = models.CharField(max_length=1, choices=[('P', 'Present'), ('A', 'Absent')], default='A')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['student__roll_no']
+
+    def __str__(self):
+        return f'{self.student.roll_no} — {self.status} @ {self.session.date_label}'
