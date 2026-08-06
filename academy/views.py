@@ -3,9 +3,12 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
+from urllib.parse import urlencode
 
 from datetime import date
+import json
 
 from .forms import (
     AttendanceRecordForm,
@@ -18,6 +21,67 @@ from .models import Academy, AttendanceRecord, PrincipalProfile, Student
 
 CLASS_LEVELS = [9, 10, 11, 12]
 STUDENT_SESSION_KEY = 'student_access_id'
+
+MONTH_DAYS = {
+    'January': 31,
+    'February': 28,
+    'March': 31,
+    'April': 30,
+    'May': 31,
+    'June': 30,
+    'July': 31,
+    'August': 31,
+    'September': 30,
+    'October': 31,
+    'November': 30,
+    'December': 31,
+}
+
+
+def _format_display_date(date_str):
+    try:
+        return date.fromisoformat(date_str).strftime('%d/%m/%Y')
+    except (TypeError, ValueError):
+        return date.today().strftime('%d/%m/%Y')
+
+
+def _attendance_month_label(month_name):
+    if month_name:
+        return f'{month_name} {date.today().year}'
+    return date.today().strftime('%B %Y')
+
+
+def _get_attendance_values(students, mode, selected_month, attendance_date):
+    if mode == 'daily':
+        label = _format_display_date(attendance_date)
+    else:
+        label = _attendance_month_label(selected_month)
+
+    records = AttendanceRecord.objects.filter(
+        student__in=students,
+        month=label,
+    ).order_by('student_id', '-id')
+
+    values = {
+        str(student.pk): {
+            'status': 'A',
+            'days_present': 0,
+            'days_total': 31,
+        }
+        for student in students
+    }
+
+    seen = set()
+    for record in records:
+        student_id = str(record.student_id)
+        if student_id in seen:
+            continue
+        seen.add(student_id)
+        values[student_id]['days_present'] = record.days_present
+        values[student_id]['days_total'] = record.days_total
+        values[student_id]['status'] = 'P' if record.days_present else 'A'
+
+    return values
 
 
 def _get_principal_academy(user):
@@ -186,53 +250,56 @@ def class_students(request, grade, gender):
         else:
             students = students.filter(roll_no__icontains=query)
 
+    attendance_mode = request.GET.get('attendance_mode', 'monthly')
+    attendance_month = request.GET.get('attendance_month', date.today().strftime('%B'))
+    attendance_date_input = request.GET.get('attendance_date_input', date.today().isoformat())
+
     if request.method == 'POST':
         if request.POST.get('attendance_action') == 'save_attendance':
-            mode = request.POST.get('attendance_mode', 'monthly')
-            selected_month = request.POST.get('attendance_month', '').strip()
-            attendance_date = request.POST.get('attendance_date_input', '').strip()
+            mode = request.POST.get('attendance_mode', attendance_mode)
+            selected_month = request.POST.get('attendance_month', attendance_month).strip()
+            attendance_date = request.POST.get('attendance_date_input', attendance_date_input).strip()
+
+            if mode == 'daily':
+                try:
+                    attendance_date_obj = date.fromisoformat(attendance_date)
+                    record_label = attendance_date_obj.strftime('%d/%m/%Y')
+                    attendance_date = attendance_date_obj.isoformat()
+                except (TypeError, ValueError):
+                    record_label = date.today().strftime('%d/%m/%Y')
+                    attendance_date = date.today().isoformat()
+            else:
+                record_label = _attendance_month_label(selected_month)
+
             for student in students:
                 if mode == 'daily':
                     status = request.POST.get(f'status_{student.pk}', 'A')
                     days_present = 1 if status == 'P' else 0
                     days_total = 1
-                    if attendance_date:
-                        record_label = attendance_date
-                    else:
-                        record_label = date.today().strftime('%d/%m/%Y')
                 else:
                     try:
                         days_present = int(request.POST.get(f'present_{student.pk}', 0))
                     except ValueError:
                         days_present = 0
-                    days_total = 31
-                    if selected_month:
-                        month_map = {
-                            'January': 31,
-                            'February': 28,
-                            'March': 31,
-                            'April': 30,
-                            'May': 31,
-                            'June': 30,
-                            'July': 31,
-                            'August': 31,
-                            'September': 30,
-                            'October': 31,
-                            'November': 30,
-                            'December': 31,
-                        }
-                        days_total = month_map.get(selected_month, 31)
+                    days_total = MONTH_DAYS.get(selected_month, 31)
                     days_present = min(max(days_present, 0), days_total)
-                    record_label = f'{selected_month} {date.today().year}' if selected_month else date.today().strftime('%B %Y')
 
-                AttendanceRecord.objects.create(
+                AttendanceRecord.objects.update_or_create(
                     student=student,
                     month=record_label,
-                    days_present=days_present,
-                    days_total=days_total,
+                    defaults={
+                        'days_present': days_present,
+                        'days_total': days_total,
+                    },
                 )
+
             messages.success(request, 'Attendance saved for all students.')
-            return redirect('class_students', grade=grade, gender=gender)
+            query_string = urlencode({
+                'attendance_mode': mode,
+                'attendance_month': selected_month,
+                'attendance_date_input': attendance_date,
+            })
+            return redirect(f'{reverse("class_students", kwargs={"grade": grade, "gender": gender})}?{query_string}')
 
         form = StudentForm(request.POST, class_level=grade)
         # populate instance fields used by model-level validation so
@@ -247,6 +314,13 @@ def class_students(request, grade, gender):
     else:
         form = StudentForm(class_level=grade)
 
+    attendance_values = _get_attendance_values(
+        students,
+        attendance_mode,
+        attendance_month,
+        attendance_date_input,
+    )
+
     return render(request, 'academy/class_students.html', {
         'academy': academy,
         'grade': grade,
@@ -256,6 +330,12 @@ def class_students(request, grade, gender):
         'form': form,
         'search_by': search_by,
         'query': query,
+        'attendance_mode': attendance_mode,
+        'attendance_month': attendance_month,
+        'attendance_date_input': attendance_date_input,
+        'attendance_date_display': _format_display_date(attendance_date_input),
+        'attendance_values_json': json.dumps(attendance_values),
+        'attendance_months': list(MONTH_DAYS.keys()),
     })
 
 

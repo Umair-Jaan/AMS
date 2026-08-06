@@ -46,37 +46,28 @@
             <div style="display: grid; gap: 0.75rem; min-width: 260px; max-width: 420px; flex: 1;">
                 <label for="attendance_mode">Attendance type</label>
                 <select id="attendance_mode" name="attendance_mode">
-                    <option value="monthly">Monthly</option>
-                    <option value="daily">Daily</option>
+                    <option value="monthly" {% if attendance_mode == 'monthly' %}selected{% endif %}>Monthly</option>
+                    <option value="daily" {% if attendance_mode == 'daily' %}selected{% endif %}>Daily</option>
                 </select>
             </div>
             <div id="attendance-period-controls" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; flex: 2; min-width: 320px;">
                 <div id="attendance-monthly" style="display: none; min-width: 220px;">
                     <label for="attendance_month">Select month</label>
                     <select id="attendance_month" name="attendance_month" style="width: 100%;">
-                        <option value="January">January</option>
-                        <option value="February">February</option>
-                        <option value="March">March</option>
-                        <option value="April">April</option>
-                        <option value="May">May</option>
-                        <option value="June">June</option>
-                        <option value="July">July</option>
-                        <option value="August">August</option>
-                        <option value="September">September</option>
-                        <option value="October">October</option>
-                        <option value="November">November</option>
-                        <option value="December">December</option>
+                        {% for month in attendance_months %}
+                        <option value="{{ month }}" {% if attendance_month == month %}selected{% endif %}>{{ month }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div id="attendance-daily" style="display: none; min-width: 220px;">
                     <label>Current date</label>
                     <div style="display: grid; gap: 0.75rem;">
                         <div id="attendance_date_display" style="padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: #0f172a; color: var(--text);">
-                            --
+                            {{ attendance_date_display }}
                         </div>
                         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
                             <button type="button" id="attendance_change_button" class="btn btn-secondary" style="padding: 0.65rem 0.95rem;">Change</button>
-                            <input type="date" id="attendance_date_input" name="attendance_date_input" style="display: none; width: auto;" />
+                            <input type="date" id="attendance_date_input" name="attendance_date_input" value="{{ attendance_date_input }}" style="display: none; width: auto;" />
                         </div>
                     </div>
                 </div>
@@ -101,7 +92,7 @@
                     </thead>
                     <tbody>
                         {% for s in students %}
-                        <tr>
+                        <tr data-student-id="{{ s.pk }}">
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
                             <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
                             <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
@@ -225,6 +216,8 @@
     <p style="color: var(--muted);">No students yet. Add one above.</p>
     {% endif %}
 </div>
+
+<template id="attendance_values_data">{{ attendance_values_json|safe }}</template>
 
 <script>
     (function() {
@@ -367,6 +360,48 @@
             });
         });
 
+        function applyAttendanceValues() {
+            let savedValues = {};
+            try {
+                savedValues = JSON.parse(document.getElementById('attendance_values_data').textContent);
+            } catch (err) {
+                savedValues = {};
+            }
+
+            document.querySelectorAll('tbody tr[data-student-id]').forEach(function(row) {
+                const studentId = row.dataset.studentId;
+                const values = savedValues[studentId] || {};
+                const status = values.status || 'A';
+                const present = values.days_present != null ? values.days_present : 0;
+
+                const statusCell = row.querySelector('.attendance-status');
+                const statusInput = row.querySelector('input.status-input');
+                if (statusCell) {
+                    statusCell.textContent = status;
+                    statusCell.style.color = status === 'P' ? '#4ade80' : '#f87171';
+                }
+                if (statusInput) {
+                    statusInput.value = status;
+                }
+
+                const presentSelect = row.querySelector('.monthly-present-select');
+                const presentDisplay = row.querySelector('.monthly-present-display');
+                const absentCell = row.querySelector('.monthly-absent-count');
+                const days = getMonthDays(document.getElementById('attendance_month').value);
+                if (presentSelect) {
+                    presentSelect.value = String(present);
+                }
+                if (presentDisplay) {
+                    presentDisplay.textContent = String(present);
+                }
+                if (absentCell) {
+                    const absent = Math.max(days - Number(present), 0);
+                    absentCell.textContent = String(absent);
+                }
+            });
+            updateTotals();
+        }
+
         function resetAttendanceForm() {
             document.querySelectorAll('.monthly-present-select').forEach(function(select) {
                 select.value = '0';
@@ -388,12 +423,28 @@
 
         document.getElementById('add_attendance_button').addEventListener('click', function() {
             resetAttendanceForm();
+            if (modeSelect.value === 'daily') {
+                const today = new Date();
+                dateDisplay.textContent = formatDate(today);
+                dateInput.value = today.toISOString().slice(0, 10);
+            }
         });
 
-        setCurrentDate();
+        function initializeDateDisplay() {
+            if (dateInput.value) {
+                const selectedDate = new Date(dateInput.value);
+                if (!isNaN(selectedDate.getTime())) {
+                    dateDisplay.textContent = formatDate(selectedDate);
+                    return;
+                }
+            }
+            setCurrentDate();
+        }
+
+        initializeDateDisplay();
         updateMode();
         updateMonthlySummary();
-        updateTotals();
+        applyAttendanceValues();
     })();
 </script>
 {% endblock %}
