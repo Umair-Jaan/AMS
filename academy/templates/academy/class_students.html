@@ -42,6 +42,7 @@
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="attendance_action" value="save_attendance" />
+        <input type="hidden" id="attendance_open_input" name="attendance_open" value="{% if attendance_open %}1{% else %}0{% endif %}" />
         <div style="margin-top: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <div style="display: grid; gap: 0.75rem; min-width: 260px; max-width: 420px; flex: 1;">
                 <label for="attendance_mode">Attendance type</label>
@@ -72,9 +73,7 @@
                     </div>
                 </div>
             </div>
-            <div style="margin-left: auto; display: flex; align-items: flex-end;">
-                <button type="button" id="add_attendance_button" style="padding: 0.75rem 1rem;">Add Attendance</button>
-            </div>
+            <div style="margin-left: auto; display: flex; align-items: flex-end;"></div>
         </div>
         <div class="card" style="margin: 0; padding: 1rem;">
             <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Class attendance</h2>
@@ -165,6 +164,37 @@
                 </div>
             </div>
             <button type="submit" style="margin-top: 1.5rem; width: fit-content;">Save Attendance</button>
+            <div style="height: 2rem;"></div>
+            <div id="new_attendance_sheet" class="card" style="display: none; padding: 1rem;">
+                <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">New attendance sheet</h2>
+                <p id="new_attendance_sheet_meta" style="margin-bottom: 1rem; color: var(--muted);">A new attendance sheet has been created for the selected date or month. Fill the fields above and click Save Attendance to preserve it.</p>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Roll number</th>
+                                <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Name</th>
+                                <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Present</th>
+                                <th class="monthly-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Absent</th>
+                                <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Mark</th>
+                                <th class="daily-only" style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in students %}
+                            <tr>
+                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.roll_no }}</td>
+                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">{{ s.name }}</td>
+                                <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
+                                <td class="monthly-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
+                                <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
+                                <td class="daily-only" style="padding: 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted);">--</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </form>
 </details>
@@ -421,14 +451,33 @@
             updateTotals();
         }
 
-        document.getElementById('add_attendance_button').addEventListener('click', function() {
-            resetAttendanceForm();
-            if (modeSelect.value === 'daily') {
-                const today = new Date();
-                dateDisplay.textContent = formatDate(today);
-                dateInput.value = today.toISOString().slice(0, 10);
+        const newAttendanceSheet = document.getElementById('new_attendance_sheet');
+        const attendanceOpenInput = document.getElementById('attendance_open_input');
+        const newAttendanceSheetMeta = document.getElementById('new_attendance_sheet_meta');
+
+        function showNewAttendanceSheet() {
+            newAttendanceSheet.style.display = '';
+            attendanceOpenInput.value = '1';
+            const mode = modeSelect.value;
+            if (mode === 'daily') {
+                newAttendanceSheetMeta.textContent = 'A new attendance sheet has been created for ' + dateDisplay.textContent + '. Fill the fields above and click Save Attendance to preserve it.';
+            } else {
+                newAttendanceSheetMeta.textContent = 'A new attendance sheet has been created for ' + document.getElementById('attendance_month').value + '. Fill the fields above and click Save Attendance to preserve it.';
             }
-        });
+        }
+
+        const addAttendanceButton = document.getElementById('add_attendance_button');
+        if (addAttendanceButton) {
+            addAttendanceButton.addEventListener('click', function() {
+                resetAttendanceForm();
+                if (modeSelect.value === 'daily') {
+                    const today = new Date();
+                    dateDisplay.textContent = formatDate(today);
+                    dateInput.value = today.toISOString().slice(0, 10);
+                }
+                showNewAttendanceSheet();
+            });
+        }
 
         function initializeDateDisplay() {
             if (dateInput.value) {
@@ -445,6 +494,9 @@
         updateMode();
         updateMonthlySummary();
         applyAttendanceValues();
+        if ({% if attendance_open %}true{% else %}false{% endif %}) {
+            showNewAttendanceSheet();
+        }
     })();
 </script>
 {% endblock %}

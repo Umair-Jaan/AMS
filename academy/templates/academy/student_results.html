@@ -37,6 +37,7 @@
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Subject</th>
                 <th>Exam date</th>
                 <th>Marks</th>
@@ -49,6 +50,12 @@
         <tbody>
             {% for r in records %}
             <tr>
+                <td style="width: 1px; white-space: nowrap;">
+                    <form method="post" action="{% url 'student_result_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this result record?');">
+                        {% csrf_token %}
+                        <button type="submit" class="mini-panel delete">Remove</button>
+                    </form>
+                </td>
                 <td>{{ r.subject }}</td>
                 <td>{{ r.exam_date|date:"d M Y"|default:"—" }}</td>
                 <td>{{ r.marks_obtained }}</td>

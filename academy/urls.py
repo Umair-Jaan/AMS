@@ -31,14 +31,29 @@ urlpatterns = [
         name='student_fees',
     ),
     path(
+        'principal/student/<int:student_id>/fees/<int:record_id>/delete/',
+        views.student_fee_delete,
+        name='student_fee_delete',
+    ),
+    path(
         'principal/student/<int:student_id>/results/',
         views.student_results,
         name='student_results',
     ),
     path(
+        'principal/student/<int:student_id>/results/<int:record_id>/delete/',
+        views.student_result_delete,
+        name='student_result_delete',
+    ),
+    path(
         'principal/student/<int:student_id>/attendance/',
         views.student_attendance,
         name='student_attendance',
+    ),
+    path(
+        'principal/student/<int:student_id>/attendance/<int:record_id>/delete/',
+        views.student_attendance_record_delete,
+        name='student_attendance_record_delete',
     ),
     path(
         'student/record/<int:student_id>/fees/',

@@ -37,6 +37,7 @@
     <table>
         <thead>
             <tr>
+                <th></th>
                 <th>Month</th>
                 <th>Due date</th>
                 <th>Amount due</th>
@@ -48,6 +49,12 @@
         <tbody>
             {% for r in records %}
             <tr>
+                <td style="width: 1px; white-space: nowrap;">
+                    <form method="post" action="{% url 'student_fee_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this fee record?');">
+                        {% csrf_token %}
+                        <button type="submit" class="mini-panel delete">Remove</button>
+                    </form>
+                </td>
                 <td>{{ r.month }}</td>
                 <td>{{ r.due_date|date:"d M Y"|default:"—" }}</td>
                 <td>{{ r.amount_due }}</td>

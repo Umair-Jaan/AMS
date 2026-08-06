@@ -17,7 +17,7 @@ from .forms import (
     ResultRecordForm,
     StudentForm,
 )
-from .models import Academy, AttendanceRecord, PrincipalProfile, Student
+from .models import Academy, AttendanceRecord, FeeRecord, PrincipalProfile, ResultRecord, Student
 
 CLASS_LEVELS = [9, 10, 11, 12]
 STUDENT_SESSION_KEY = 'student_access_id'
@@ -99,6 +99,14 @@ def _get_student_for_principal(user, student_id):
     return academy, student
 
 
+def _get_student_record(user, student_id, model, record_id):
+    academy, student = _get_student_for_principal(user, student_id)
+    if not student:
+        return None, None, None
+    record = get_object_or_404(model, pk=record_id, student=student)
+    return academy, student, record
+
+
 def _grant_student_session(request, student):
     request.session[STUDENT_SESSION_KEY] = student.pk
 
@@ -151,6 +159,78 @@ def _handle_record_view(
         'readonly': readonly,
         'grade': student.class_level,
         'gender': student.gender,
+    })
+
+
+def _student_attendance_view(request, student_id, readonly=False):
+    if readonly:
+        student = _get_student_for_readonly(request, student_id)
+        if not student:
+            return redirect('student_lookup')
+        academy = student.academy
+    else:
+        academy, student = _get_student_for_principal(request.user, student_id)
+        if not student:
+            return redirect('home')
+
+    attendance_date_input = request.GET.get('attendance_date_input', date.today().isoformat())
+    attendance_date_label = _format_display_date(attendance_date_input)
+    daily_record = AttendanceRecord.objects.filter(
+        student=student,
+        month=attendance_date_label,
+    ).first()
+    daily_status = 'P' if daily_record and daily_record.days_present else 'A'
+    monthly_form = None if readonly else AttendanceRecordForm()
+
+    if not readonly and request.method == 'POST':
+        action = request.POST.get('attendance_action')
+        if action == 'save_daily':
+            attendance_date = request.POST.get('attendance_date_input', attendance_date_input).strip()
+            try:
+                attendance_date_obj = date.fromisoformat(attendance_date)
+                record_label = attendance_date_obj.strftime('%d/%m/%Y')
+                attendance_date = attendance_date_obj.isoformat()
+            except (TypeError, ValueError):
+                record_label = date.today().strftime('%d/%m/%Y')
+                attendance_date = date.today().isoformat()
+
+            status = request.POST.get('status', 'A')
+            days_present = 1 if status == 'P' else 0
+            AttendanceRecord.objects.update_or_create(
+                student=student,
+                month=record_label,
+                defaults={
+                    'days_present': days_present,
+                    'days_total': 1,
+                },
+            )
+            messages.success(request, 'Daily attendance saved.')
+            query_string = urlencode({'attendance_date_input': attendance_date})
+            return redirect(f'{reverse("student_attendance", kwargs={"student_id": student_id})}?{query_string}')
+
+        if action == 'save_monthly':
+            monthly_form = AttendanceRecordForm(request.POST)
+            if monthly_form.is_valid():
+                record = monthly_form.save(commit=False)
+                record.student = student
+                record.save()
+                messages.success(request, 'Monthly attendance record added.')
+                return redirect('student_attendance', student_id=student_id)
+
+    records = student.attendance_records.all()
+
+    return render(request, 'academy/student_attendance.html', {
+        'student': student,
+        'academy': academy,
+        'records': records,
+        'readonly': readonly,
+        'grade': student.class_level,
+        'gender': student.gender,
+        'attendance_date_input': attendance_date_input,
+        'attendance_date_display': attendance_date_label,
+        'daily_record': daily_record,
+        'daily_status': daily_status,
+        'monthly_form': monthly_form,
     })
 
 
@@ -250,39 +330,23 @@ def class_students(request, grade, gender):
         else:
             students = students.filter(roll_no__icontains=query)
 
-    attendance_mode = request.GET.get('attendance_mode', 'monthly')
-    attendance_month = request.GET.get('attendance_month', date.today().strftime('%B'))
     attendance_date_input = request.GET.get('attendance_date_input', date.today().isoformat())
 
     if request.method == 'POST':
         if request.POST.get('attendance_action') == 'save_attendance':
-            mode = request.POST.get('attendance_mode', attendance_mode)
-            selected_month = request.POST.get('attendance_month', attendance_month).strip()
             attendance_date = request.POST.get('attendance_date_input', attendance_date_input).strip()
-
-            if mode == 'daily':
-                try:
-                    attendance_date_obj = date.fromisoformat(attendance_date)
-                    record_label = attendance_date_obj.strftime('%d/%m/%Y')
-                    attendance_date = attendance_date_obj.isoformat()
-                except (TypeError, ValueError):
-                    record_label = date.today().strftime('%d/%m/%Y')
-                    attendance_date = date.today().isoformat()
-            else:
-                record_label = _attendance_month_label(selected_month)
+            try:
+                attendance_date_obj = date.fromisoformat(attendance_date)
+                record_label = attendance_date_obj.strftime('%d/%m/%Y')
+                attendance_date = attendance_date_obj.isoformat()
+            except (TypeError, ValueError):
+                record_label = date.today().strftime('%d/%m/%Y')
+                attendance_date = date.today().isoformat()
 
             for student in students:
-                if mode == 'daily':
-                    status = request.POST.get(f'status_{student.pk}', 'A')
-                    days_present = 1 if status == 'P' else 0
-                    days_total = 1
-                else:
-                    try:
-                        days_present = int(request.POST.get(f'present_{student.pk}', 0))
-                    except ValueError:
-                        days_present = 0
-                    days_total = MONTH_DAYS.get(selected_month, 31)
-                    days_present = min(max(days_present, 0), days_total)
+                status = request.POST.get(f'status_{student.pk}', 'A')
+                days_present = 1 if status == 'P' else 0
+                days_total = 1
 
                 AttendanceRecord.objects.update_or_create(
                     student=student,
@@ -295,8 +359,6 @@ def class_students(request, grade, gender):
 
             messages.success(request, 'Attendance saved for all students.')
             query_string = urlencode({
-                'attendance_mode': mode,
-                'attendance_month': selected_month,
                 'attendance_date_input': attendance_date,
             })
             return redirect(f'{reverse("class_students", kwargs={"grade": grade, "gender": gender})}?{query_string}')
@@ -316,8 +378,8 @@ def class_students(request, grade, gender):
 
     attendance_values = _get_attendance_values(
         students,
-        attendance_mode,
-        attendance_month,
+        'daily',
+        None,
         attendance_date_input,
     )
 
@@ -330,12 +392,9 @@ def class_students(request, grade, gender):
         'form': form,
         'search_by': search_by,
         'query': query,
-        'attendance_mode': attendance_mode,
-        'attendance_month': attendance_month,
         'attendance_date_input': attendance_date_input,
         'attendance_date_display': _format_display_date(attendance_date_input),
         'attendance_values_json': json.dumps(attendance_values),
-        'attendance_months': list(MONTH_DAYS.keys()),
     })
 
 
@@ -389,6 +448,17 @@ def student_fees(request, student_id):
 
 
 @login_required
+@require_POST
+def student_fee_delete(request, student_id, record_id):
+    academy, student, record = _get_student_record(request.user, student_id, FeeRecord, record_id)
+    if not student:
+        return redirect('home')
+    record.delete()
+    messages.success(request, 'Fee record removed.')
+    return redirect('student_fees', student_id=student_id)
+
+
+@login_required
 def student_results(request, student_id):
     return _handle_record_view(
         request, student_id, ResultRecordForm, 'result_records',
@@ -397,11 +467,34 @@ def student_results(request, student_id):
 
 
 @login_required
+@require_POST
+def student_result_delete(request, student_id, record_id):
+    academy, student, record = _get_student_record(request.user, student_id, ResultRecord, record_id)
+    if not student:
+        return redirect('home')
+    record.delete()
+    messages.success(request, 'Result record removed.')
+    return redirect('student_results', student_id=student_id)
+
+
+@login_required
 def student_attendance(request, student_id):
-    return _handle_record_view(
-        request, student_id, AttendanceRecordForm, 'attendance_records',
-        'academy/student_attendance.html', redirect_name='student_attendance',
-    )
+    return _student_attendance_view(request, student_id, readonly=False)
+
+
+@login_required
+@require_POST
+def student_attendance_record_delete(request, student_id, record_id):
+    academy, student, record = _get_student_record(request.user, student_id, AttendanceRecord, record_id)
+    if not student:
+        return redirect('home')
+    record.delete()
+    messages.success(request, 'Attendance record removed.')
+    return redirect('student_attendance', student_id=student_id)
+
+
+def student_attendance_readonly(request, student_id):
+    return _student_attendance_view(request, student_id, readonly=True)
 
 
 def student_fees_readonly(request, student_id):
