@@ -404,6 +404,31 @@ def class_students(request, grade, gender):
             })
             return redirect(f'{reverse("class_students", kwargs={"grade": grade, "gender": gender})}?{query_string}')
 
+        if request.POST.get('fee_action') == 'save_fees':
+            month_label = date.today().strftime('%B %Y')
+            from decimal import Decimal
+            for student in students:
+                status = request.POST.get(f'fee_status_{student.pk}', '').strip()
+                amount_raw = request.POST.get(f'fee_amount_{student.pk}', '').strip()
+                if not status:
+                    continue
+
+                amount_paid = Decimal(amount_raw) if amount_raw else Decimal('0')
+                amount_due = amount_paid if status == 'collect' else Decimal('0')
+                FeeRecord.objects.update_or_create(
+                    student=student,
+                    month=month_label,
+                    defaults={
+                        'status': status,
+                        'amount_due': amount_due,
+                        'amount_paid': amount_paid,
+                        'note': '',
+                    }
+                )
+
+            messages.success(request, 'Fee panel data saved.')
+            return redirect('class_students', grade=grade, gender=gender)
+
         form = StudentForm(request.POST, class_level=grade)
         # populate instance fields used by model-level validation so
         # `validate_unique` can catch duplicates (academy + roll_no)

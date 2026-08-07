@@ -34,6 +34,75 @@
     </div>
 </details>
 
+<details class="panel fees-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
+    <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
+        <span style="font-size: 1.1rem; font-weight: 600;">Fees</span>
+        <span style="color: var(--accent); font-size: 0.95rem;">Open panel</span>
+    </summary>
+    <div style="margin-top: 1.25rem;">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="fee_action" value="save_fees" />
+            <div class="card" style="margin:0; padding:1rem;">
+                <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Class fees</h2>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Roll</th>
+                                <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Name</th>
+                                <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Status</th>
+                                <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Edit</th>
+                                <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in students %}
+                            <tr data-student-id="{{ s.pk }}">
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ s.roll_no }}</td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ s.name }}</td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                                    <div class="fees-controls" data-student-id="{{ s.pk }}">
+                                        <select class="fees-status-select">
+                                            <option value="">-- select --</option>
+                                            <option value="received">Received</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="collect">Collect</option>
+                                        </select>
+                                        <input type="hidden" name="fee_status_{{ s.pk }}" value="" class="fee-status-hidden" />
+                                        <input type="hidden" name="fee_amount_{{ s.pk }}" value="" class="fee-amount-hidden" />
+                                        <span class="fees-status-label" style="margin-left:0.5rem; font-weight:700; display:none;"></span>
+                                    </div>
+                                </td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                                    <button type="button" class="mini-panel edit-fees">Edit</button>
+                                </td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                                    <select class="fees-amount-select" style="display:none;">
+                                        <option value="">-- amount --</option>
+                                        <option value="1500">1500</option>
+                                        <option value="1700">1700</option>
+                                        <option value="2000">2000</option>
+                                        <option value="2500">2500</option>
+                                        <option value="2700">2700</option>
+                                        <option value="3000">3000</option>
+                                        <option value="3300">3300</option>
+                                        <option value="3500">3500</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+                    <button type="submit" style="padding:0.75rem 1rem;">Save Fees</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</details>
+
 <details class="panel attendance-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
     <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
         <span style="font-size: 1.1rem; font-weight: 600;">Attendance</span>
@@ -203,6 +272,99 @@
                 }
                 updateTotals();
             });
+        });
+
+        const feeRows = document.querySelectorAll('.fees-panel tr[data-student-id]');
+        feeRows.forEach(function(row) {
+            const statusSelect = row.querySelector('.fees-status-select');
+            const amountSelect = row.querySelector('.fees-amount-select');
+            const statusLabel = row.querySelector('.fees-status-label');
+            const hiddenStatus = row.querySelector('.fee-status-hidden');
+            const hiddenAmount = row.querySelector('.fee-amount-hidden');
+            const editButton = row.querySelector('.edit-fees');
+            if (!statusSelect) {
+                return;
+            }
+
+            function updateFeeDisplay() {
+                const status = statusSelect.value;
+                if (!status) {
+                    if (statusLabel) statusLabel.style.display = 'none';
+                    if (amountSelect) amountSelect.style.display = 'none';
+                    if (hiddenStatus) hiddenStatus.value = '';
+                    if (hiddenAmount) hiddenAmount.value = '';
+                    if (statusSelect) statusSelect.style.display = 'inline-block';
+                    return;
+                }
+
+                if (status === 'received') {
+                    if (statusLabel) {
+                        statusLabel.style.display = 'inline';
+                        statusLabel.textContent = 'Received';
+                        statusLabel.style.color = '#22c55e';
+                    }
+                    if (amountSelect) amountSelect.style.display = 'none';
+                    if (hiddenStatus) hiddenStatus.value = 'received';
+                    if (hiddenAmount) hiddenAmount.value = '';
+                    if (statusSelect) statusSelect.style.display = 'none';
+                } else if (status === 'pending') {
+                    if (statusLabel) {
+                        statusLabel.style.display = 'inline';
+                        statusLabel.textContent = 'Pending';
+                        statusLabel.style.color = '#ef4444';
+                    }
+                    if (amountSelect) amountSelect.style.display = 'none';
+                    if (hiddenStatus) hiddenStatus.value = 'pending';
+                    if (hiddenAmount) hiddenAmount.value = '';
+                    if (statusSelect) statusSelect.style.display = 'none';
+                } else if (status === 'collect') {
+                    if (statusLabel) {
+                        statusLabel.style.display = 'inline';
+                        const amountText = amountSelect && amountSelect.value ? ' (' + amountSelect.value + ')' : '';
+                        statusLabel.textContent = 'Collect' + amountText;
+                        statusLabel.style.color = '#f59e0b';
+                    }
+                    if (amountSelect) amountSelect.style.display = 'inline-block';
+                    if (hiddenStatus) hiddenStatus.value = 'collect';
+                    if (hiddenAmount) hiddenAmount.value = amountSelect ? amountSelect.value : '';
+                    if (statusSelect) statusSelect.style.display = 'none';
+                }
+            }
+
+            if (statusSelect) {
+                statusSelect.addEventListener('change', function() {
+                    updateFeeDisplay();
+                });
+            }
+
+            if (amountSelect) {
+                amountSelect.addEventListener('change', function() {
+                    if (hiddenAmount) hiddenAmount.value = amountSelect.value;
+                    if (statusLabel && statusSelect.value === 'collect' && amountSelect.value) {
+                        statusLabel.textContent = 'Collect (' + amountSelect.value + ')';
+                        amountSelect.style.display = 'none';
+                    }
+                });
+            }
+
+            if (editButton) {
+                editButton.addEventListener('click', function() {
+                    if (statusSelect) {
+                        statusSelect.style.display = 'inline-block';
+                        statusSelect.value = '';
+                    }
+                    if (amountSelect) {
+                        amountSelect.style.display = 'none';
+                        amountSelect.value = '';
+                    }
+                    if (statusLabel) {
+                        statusLabel.style.display = 'none';
+                        statusLabel.textContent = '';
+                    }
+                    if (hiddenStatus) hiddenStatus.value = '';
+                    if (hiddenAmount) hiddenAmount.value = '';
+                });
+            }
         });
 
         // No initial application of saved values; keep live status empty.

@@ -95,6 +95,8 @@ class Student(models.Model):
 class FeeRecord(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('received', 'Received'),
+        ('collect', 'Collect'),
         ('partial', 'Partial'),
         ('paid', 'Paid'),
     ]

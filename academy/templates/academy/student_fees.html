@@ -17,54 +17,48 @@
     {% include 'academy/_student_record_nav.html' %}
 </div>
 
-{% if not readonly %}
-<div class="card">
-    <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Add fee record</h2>
-    <form method="post">
-        {% csrf_token %}
-        {% for field in form %}
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% endfor %}
-        <button type="submit">Add Fee</button>
-    </form>
-</div>
-{% endif %}
-
 <div class="card">
     <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Fee history</h2>
     {% if records %}
-    <table>
-        <thead>
-            <tr>
-                <th></th>
-                <th>Month</th>
-                <th>Due date</th>
-                <th>Amount due</th>
-                <th>Paid</th>
-                <th>Status</th>
-                <th>Note</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in records %}
-            <tr>
-                <td style="width: 1px; white-space: nowrap;">
-                    <form method="post" action="{% url 'student_fee_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this fee record?');">
-                        {% csrf_token %}
-                        <button type="submit" class="mini-panel delete">Remove</button>
-                    </form>
-                </td>
-                <td>{{ r.month }}</td>
-                <td>{{ r.due_date|date:"d M Y"|default:"—" }}</td>
-                <td>{{ r.amount_due }}</td>
-                <td>{{ r.amount_paid }}</td>
-                <td><span class="badge badge-{{ r.status }}">{{ r.get_status_display }}</span></td>
-                <td>{{ r.note|default:"—" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Roll</th>
+                    <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Month</th>
+                    <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Status</th>
+                    <th style="padding:0.75rem; text-align:left; border-bottom:1px solid var(--border);">Remove</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ student.roll_no }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ r.month }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                        {% if r.status == 'collect' %}
+                            <span style="font-weight:700; color:#f59e0b;">Collect{% if r.amount_paid %} ({{ r.amount_paid }}){% endif %}</span>
+                        {% elif r.status == 'received' %}
+                            <span style="font-weight:700; color:#22c55e;">Received{% if r.amount_paid %} ({{ r.amount_paid }}){% endif %}</span>
+                        {% elif r.status == 'pending' %}
+                            <span style="font-weight:700; color:#ef4444;">Pending</span>
+                        {% else %}
+                            <span style="font-weight:700;">{{ r.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                        {% if not readonly %}
+                        <form method="post" action="{% url 'student_fee_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this fee record?');">
+                            {% csrf_token %}
+                            <button type="submit" class="mini-panel delete">Remove</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p style="color: var(--muted);">No fee records yet.</p>
     {% endif %}
