@@ -565,6 +565,33 @@ def class_students(request, grade, gender):
     ]
     result_columns = range(1, 7)
 
+    from decimal import Decimal
+    result_subjects = list(result_records.order_by('subject').values_list('subject', flat=True).distinct())[:6]
+    student_results = []
+    results_by_student = {}
+    for record in result_records:
+        results_by_student.setdefault(record.student_id, []).append(record)
+
+    for student in students:
+        records = results_by_student.get(student.pk)
+        if not records:
+            continue
+        records_by_subject = {record.subject: record for record in records}
+        total_obtained = sum((record.marks_obtained for record in records), Decimal('0'))
+        total_marks = sum((record.total_marks for record in records), Decimal('0'))
+        percentage = round(float(total_obtained) / float(total_marks) * 100, 1) if total_marks else 0
+        student_results.append({
+            'student': student,
+            'records': records_by_subject,
+            'subject_values': [
+                records_by_subject.get(subject).marks_obtained if records_by_subject.get(subject) is not None else ''
+                for subject in result_subjects
+            ],
+            'total_obtained': total_obtained,
+            'total_marks': total_marks,
+            'percentage': percentage,
+        })
+
     # class page should not display saved session entries; sessions are
     # displayed on the individual student's attendance page instead.
     session_entries = None
@@ -585,6 +612,8 @@ def class_students(request, grade, gender):
         'result_records': result_records,
         'result_subject_choices': subject_choices,
         'result_columns': result_columns,
+        'result_subjects': result_subjects,
+        'student_results': student_results,
     })
 
 

@@ -242,9 +242,6 @@
                             </div>
                         </td>
                         {% endfor %}
-                        <td style="padding: 0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
-                            <button type="button" class="mini-panel edit-result" style="padding: 0.5rem 0.8rem;">Edit</button>
-                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -263,39 +260,29 @@
     </summary>
     <div style="margin-top: 1.25rem; overflow-x:auto;">
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
-            {% if result_records %}
+            {% if student_results %}
             <table style="width:100%; border-collapse: collapse; min-width: 960px;">
                 <thead>
                     <tr>
                         <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Subject</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Date</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Obtained</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total</th>
+                        {% for subject in result_subjects %}
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
+                        {% endfor %}
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
                         <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Notes</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for record in result_records %}
+                    {% for row in student_results %}
                     <tr>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.student.roll_no }} - {{ record.student.name }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.subject }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.exam_date|date:"m/d/Y"|default:"—" }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.marks_obtained }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.total_marks }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.percentage }}%</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.note|default:"—" }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
-                            <form method="post" style="display:inline;">
-                                {% csrf_token %}
-                                <input type="hidden" name="result_action" value="delete_result" />
-                                <input type="hidden" name="result_id" value="{{ record.pk }}" />
-                                <button type="submit" class="mini-panel delete">Remove</button>
-                            </form>
-                            <button type="button" class="mini-panel edit-result-record" data-record-id="{{ record.pk }}" style="margin-left:0.5rem;">Edit</button>
-                        </td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.student.roll_no }} - {{ row.student.name }}</td>
+                        {% for value in row.subject_values %}
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ value }}</td>
+                        {% endfor %}
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
                     </tr>
                     {% endfor %}
                 </tbody>
