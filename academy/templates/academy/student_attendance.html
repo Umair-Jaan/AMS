@@ -52,6 +52,48 @@
     </div>
     {% endif %}
 
+    <form method="get" style="margin-top: 1rem; display: grid; gap: 0.75rem; max-width: 480px;">
+        <div style="display: grid; gap: 0.5rem;">
+            <label for="attendance_history_search_type">Search session attendance by</label>
+            <select id="attendance_history_search_type" name="attendance_history_search_type">
+                <option value="date" {% if history_search_type == 'date' %}selected{% endif %}>Date</option>
+                <option value="month" {% if history_search_type == 'month' %}selected{% endif %}>Month</option>
+            </select>
+        </div>
+        <div id="attendance_history_date_block" style="display: {% if history_search_type == 'date' %}grid{% else %}none{% endif %}; gap: 0.5rem;">
+            <label for="attendance_history_date_input">Date</label>
+            <input type="date" id="attendance_history_date_input" name="attendance_history_date_input" value="{{ history_date_input }}" />
+        </div>
+        <div id="attendance_history_month_block" style="display: {% if history_search_type == 'month' %}grid{% else %}none{% endif %}; gap: 0.5rem;">
+            <label for="attendance_history_month">Month</label>
+            <select id="attendance_history_month" name="attendance_history_month">
+                {% for m in history_month_options %}
+                <option value="{{ m }}" {% if history_month == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+            <label for="attendance_history_year">Year</label>
+            <select id="attendance_history_year" name="attendance_history_year">
+                {% for y in year_options %}
+                <option value="{{ y }}" {% if history_year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" style="width: fit-content; padding: 0.65rem 1rem;">Search</button>
+    </form>
+    <script>
+        document.getElementById('attendance_history_search_type').addEventListener('change', function(event) {
+            const dateBlock = document.getElementById('attendance_history_date_block');
+            const monthBlock = document.getElementById('attendance_history_month_block');
+            if (event.target.value === 'date') {
+                dateBlock.style.display = 'grid';
+                monthBlock.style.display = 'none';
+            } else {
+                dateBlock.style.display = 'none';
+                monthBlock.style.display = 'grid';
+            }
+        });
+    </script>
+
     {% if session_entries %}
     <div style="margin-top: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
         <h3 style="margin:0 0 0.5rem 0;">Session attendance (saved entries)</h3>
@@ -88,45 +130,21 @@
 
     {% if not readonly %}
     <div style="display: grid; gap: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
-        <h2 style="margin: 0; font-size: 1.1rem;">Add monthly record</h2>
+        <h2 style="margin: 0; font-size: 1.1rem;">Mark student attendance</h2>
         <form method="post" style="display: grid; gap: 1rem; max-width: 560px;">
             {% csrf_token %}
-            <input type="hidden" name="attendance_action" value="save_monthly" />
-            {% if monthly_form and monthly_form.non_field_errors %}
-                <ul class="errorlist">
-                    {% for error in monthly_form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-                {% if monthly_form %}
-                    <div style="display: grid; gap: 0.5rem; max-width: 420px;">
-                        <label for="month_select">Select month</label>
-                        <select id="month_select">
-                            {% for m in month_options %}
-                            <option value="{{ m }}">{{ m }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                {% for field in monthly_form %}
-                    {% if field.name == 'month' %}
-                        {{ field }}
-                    {% else %}
-                        <div style="display: grid; gap: 0.5rem;">
-                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                                <ul class="errorlist">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <strong>Absent days:</strong>
-                    <span id="monthly_absent_display" style="font-weight: 700;">0</span>
-                </div>
-            {% endif %}
-            <button type="submit" style="width: fit-content; padding: 0.75rem 1rem;">Add record</button>
+            <input type="hidden" name="attendance_action" value="save_daily" />
+            <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
+            <input type="hidden" name="status" id="daily_attendance_status" value="{{ daily_status }}" />
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button type="button" id="daily_present_button" class="btn" style="background: #16a34a; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Present</button>
+                <button type="button" id="daily_absent_button" class="btn" style="background: #b91c1c; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Absent</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <strong>Selected status:</strong>
+                <span id="daily_status_display" style="font-weight: 700;">{{ daily_status }}</span>
+            </div>
+            <button type="submit" style="width: fit-content; padding: 0.75rem 1rem;">Save Daily Attendance</button>
         </form>
     </div>
     {% endif %}
@@ -173,70 +191,10 @@
 
 <script>
     (function() {
-        const monthSelect = document.getElementById('month_select');
-        if (monthSelect) {
-            monthSelect.addEventListener('change', function() {
-                const val = monthSelect.value;
-                const monthInput = document.querySelector('input[name="month"]');
-                if (monthInput) monthInput.value = val;
-            });
-            // initialize
-            const initEl = document.querySelector('input[name="month"]');
-            if (initEl && monthSelect.options.length) {
-                initEl.value = monthSelect.options[0].value;
-            }
-        }
-    })();
-    (function() {
-        // map of month name -> days provided by view
-        let monthDays = {};
-        try {
-            monthDays = JSON.parse(document.getElementById('month_days_data').textContent);
-        } catch (e) {
-            monthDays = {};
-        }
-
-        const monthSelect = document.getElementById('month_select');
-        const daysTotalInput = document.querySelector('input[name="days_total"]');
-        function setDaysTotalFor(val) {
-            if (!val || !daysTotalInput) return;
-            const monthName = val.split(' ')[0];
-            const days = monthDays[monthName];
-            if (days) daysTotalInput.value = String(days);
-            // trigger absent recalculation if present
-            const ev = new Event('input');
-            daysTotalInput.dispatchEvent(ev);
-        }
-
-        if (monthSelect) {
-            monthSelect.addEventListener('change', function() {
-                setDaysTotalFor(monthSelect.value);
-                const monthInput = document.querySelector('input[name="month"]');
-                if (monthInput) monthInput.value = monthSelect.value;
-            });
-            if (monthSelect.options.length) {
-                setDaysTotalFor(monthSelect.options[0].value);
-            }
-        }
-    })();
-    (function() {
         const presentButton = document.getElementById('daily_present_button');
         const absentButton = document.getElementById('daily_absent_button');
         const statusInput = document.getElementById('daily_attendance_status');
         const statusDisplay = document.getElementById('daily_status_display');
-        const monthlyPresent = document.querySelector('input[name="days_present"]');
-        const monthlyTotal = document.querySelector('input[name="days_total"]');
-        const monthlyAbsentDisplay = document.getElementById('monthly_absent_display');
-
-        function updateMonthlyAbsent() {
-            if (!monthlyPresent || !monthlyTotal || !monthlyAbsentDisplay) {
-                return;
-            }
-            const present = Number(monthlyPresent.value) || 0;
-            const total = Number(monthlyTotal.value) || 0;
-            const absent = Math.max(total - present, 0);
-            monthlyAbsentDisplay.textContent = String(absent);
-        }
 
         if (presentButton && absentButton && statusInput && statusDisplay) {
             presentButton.addEventListener('click', function() {
@@ -252,13 +210,7 @@
                 presentButton.style.opacity = '0.6';
             });
         }
-
-        if (monthlyPresent) {
-            monthlyPresent.addEventListener('input', updateMonthlyAbsent);
-        }
-        if (monthlyTotal) {
-            monthlyTotal.addEventListener('input', updateMonthlyAbsent);
-        }
+    })();
 
         updateMonthlyAbsent();
     })();

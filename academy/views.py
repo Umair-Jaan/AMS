@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from urllib.parse import urlencode
 
-from datetime import date
+from datetime import date, datetime
 import json
 
 from .forms import (
@@ -52,7 +52,22 @@ def _format_display_date(date_str):
     try:
         return date.fromisoformat(date_str).strftime('%d/%m/%Y')
     except (TypeError, ValueError):
-        return date.today().strftime('%d/%m/%Y')
+        try:
+            return datetime.strptime(date_str, '%m/%d/%Y').strftime('%d/%m/%Y')
+        except (TypeError, ValueError):
+            return date.today().strftime('%d/%m/%Y')
+
+
+def _parse_search_date(date_str):
+    if not date_str:
+        return None
+    try:
+        return date.fromisoformat(date_str)
+    except (TypeError, ValueError):
+        try:
+            return datetime.strptime(date_str, '%m/%d/%Y').date()
+        except (TypeError, ValueError):
+            return None
 
 
 def _attendance_month_label(month_name):
@@ -137,6 +152,8 @@ def _handle_record_view(
     template_name,
     redirect_name=None,
     readonly=False,
+    date_filter_field=None,
+    date_filter_input_name=None,
 ):
     if readonly:
         student = _get_student_for_readonly(request, student_id)
@@ -161,7 +178,15 @@ def _handle_record_view(
         else:
             form = form_class()
 
-    return render(request, template_name, {
+    date_filter_value = ''
+    if date_filter_field and date_filter_input_name:
+        date_filter_value = request.GET.get(date_filter_input_name, '').strip()
+        if date_filter_value:
+            parsed_date = _parse_search_date(date_filter_value)
+            if parsed_date is not None:
+                records = records.filter(**{date_filter_field: parsed_date})
+
+    context = {
         'student': student,
         'academy': academy,
         'records': records,
@@ -169,7 +194,11 @@ def _handle_record_view(
         'readonly': readonly,
         'grade': student.class_level,
         'gender': student.gender,
-    })
+    }
+
+    if date_filter_input_name:
+        context[date_filter_input_name] = date_filter_value
+    return render(request, template_name, context)
 
 
 def _student_attendance_view(request, student_id, readonly=False):
@@ -190,13 +219,37 @@ def _student_attendance_view(request, student_id, readonly=False):
         month=attendance_date_label,
     ).first()
     daily_status = 'P' if daily_record and daily_record.days_present else 'A'
-    monthly_form = None if readonly else AttendanceRecordForm()
-    if monthly_form:
-        # Render the month field as hidden; month will be selected by the dropdown
+
+    history_search_type = request.GET.get('attendance_history_search_type', 'date')
+    history_date_input = request.GET.get('attendance_history_date_input', date.today().isoformat())
+    history_month = request.GET.get('attendance_history_month', date.today().strftime('%B'))
+    history_year = request.GET.get('attendance_history_year', str(date.today().year))
+
+    def _month_number(month_name):
         try:
-            monthly_form.fields['month'].widget = HiddenInput()
-        except Exception:
-            pass
+            return f'{list(MONTH_DAYS.keys()).index(month_name) + 1:02}'
+        except ValueError:
+            return None
+
+    records = student.attendance_records.all()
+    session_entries = AttendanceSessionEntry.objects.filter(
+        student=student,
+    ).select_related('session').order_by('session__created_at')
+
+    if history_search_type == 'date':
+        history_date_obj = _parse_search_date(history_date_input)
+        if history_date_obj is not None:
+            history_date_label = history_date_obj.strftime('%d/%m/%Y')
+            records = records.filter(month=history_date_label)
+            session_entries = session_entries.filter(session__date_label=history_date_label)
+    elif history_search_type == 'month':
+        history_month_label = f'{history_month} {history_year}'
+        month_number = _month_number(history_month)
+        records = records.filter(month=history_month_label)
+        if month_number:
+            session_entries = session_entries.filter(
+                session__date_label__contains=f'/{month_number}/{history_year}'
+            )
 
     if not readonly and request.method == 'POST':
         action = request.POST.get('attendance_action')
@@ -224,31 +277,8 @@ def _student_attendance_view(request, student_id, readonly=False):
             query_string = urlencode({'attendance_date_input': attendance_date})
             return redirect(f'{reverse("student_attendance", kwargs={"student_id": student_id})}?{query_string}')
 
-        if action == 'save_monthly':
-            monthly_form = AttendanceRecordForm(request.POST)
-            try:
-                monthly_form.fields['month'].widget = HiddenInput()
-            except Exception:
-                pass
-            if monthly_form.is_valid():
-                record = monthly_form.save(commit=False)
-                record.student = student
-                record.save()
-                messages.success(request, 'Monthly attendance record added.')
-                return redirect('student_attendance', student_id=student_id)
-
-    records = student.attendance_records.all()
-
-    # Fetch session entries for this student/date (class session snapshots)
-    session_entries = AttendanceSessionEntry.objects.filter(
-        student=student,
-        session__date_label=attendance_date_label,
-    ).select_related('session').order_by('session__created_at')
-
-    # Month dropdown options for monthly attendance (e.g. "January 2026")
-    current_year = date.today().year
-    month_options = [f"{m} {current_year}" for m in MONTH_DAYS.keys()]
-    month_days_json = json.dumps(MONTH_DAYS)
+    history_month_options = list(MONTH_DAYS.keys())
+    year_options = [str(y) for y in range(date.today().year - 3, date.today().year + 3)]
 
     return render(request, 'academy/student_attendance.html', {
         'student': student,
@@ -261,10 +291,13 @@ def _student_attendance_view(request, student_id, readonly=False):
         'attendance_date_display': attendance_date_label,
         'daily_record': daily_record,
         'daily_status': daily_status,
-        'monthly_form': monthly_form,
         'session_entries': session_entries,
-        'month_options': month_options,
-        'month_days_json': month_days_json,
+        'history_month_options': history_month_options,
+        'history_search_type': history_search_type,
+        'history_date_input': history_date_input,
+        'history_month': history_month,
+        'history_year': history_year,
+        'year_options': year_options,
     })
 
 
@@ -429,7 +462,12 @@ def class_students(request, grade, gender):
             messages.success(request, 'Fee panel data saved.')
             return redirect('class_students', grade=grade, gender=gender)
 
-        form = StudentForm(request.POST, class_level=grade)
+        form = StudentForm(
+            request.POST,
+            class_level=grade,
+            gender=gender,
+            academy=academy,
+        )
         # populate instance fields used by model-level validation so
         # `validate_unique` can catch duplicates (academy + roll_no)
         form.instance.academy = academy
@@ -440,7 +478,11 @@ def class_students(request, grade, gender):
             messages.success(request, f'Student {student.roll_no} added.')
             return redirect('class_students', grade=grade, gender=gender)
     else:
-        form = StudentForm(class_level=grade)
+        form = StudentForm(
+            class_level=grade,
+            gender=gender,
+            academy=academy,
+        )
 
     attendance_values = _get_attendance_values(
         students,
@@ -476,7 +518,13 @@ def student_edit(request, student_id):
         return redirect('home')
 
     if request.method == 'POST':
-        form = StudentForm(request.POST, instance=student)
+        form = StudentForm(
+            request.POST,
+            instance=student,
+            class_level=student.class_level,
+            gender=student.gender,
+            academy=academy,
+        )
         if form.is_valid():
             form.save()
             messages.success(request, f'Student {student.roll_no} updated.')
@@ -486,7 +534,12 @@ def student_edit(request, student_id):
                 gender=student.gender,
             )
     else:
-        form = StudentForm(instance=student, class_level=student.class_level)
+        form = StudentForm(
+            instance=student,
+            class_level=student.class_level,
+            gender=student.gender,
+            academy=academy,
+        )
 
     return render(request, 'academy/student_edit.html', {
         'form': form,
@@ -513,8 +566,14 @@ def student_delete(request, student_id):
 @login_required
 def student_fees(request, student_id):
     return _handle_record_view(
-        request, student_id, FeeRecordForm, 'fee_records',
-        'academy/student_fees.html', redirect_name='student_fees',
+        request,
+        student_id,
+        FeeRecordForm,
+        'fee_records',
+        'academy/student_fees.html',
+        redirect_name='student_fees',
+        date_filter_field='due_date',
+        date_filter_input_name='fee_due_date_input',
     )
 
 

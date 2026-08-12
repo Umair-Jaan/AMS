@@ -88,6 +88,30 @@ class Student(models.Model):
         unique_together = ['academy', 'roll_no']
         ordering = ['class_level', 'gender', 'roll_no']
 
+    @staticmethod
+    def roll_prefix(class_level, gender):
+        if gender == 'boys':
+            prefix = 'B'
+        else:
+            prefix = 'G'
+        return f'{prefix}{class_level}'
+
+    @classmethod
+    def get_next_roll_no(cls, academy, class_level, gender):
+        prefix = cls.roll_prefix(class_level, gender)
+        students = cls.objects.filter(
+            academy=academy,
+            class_level=class_level,
+            gender=gender,
+            roll_no__istartswith=prefix,
+        )
+        next_number = 1
+        for student in students:
+            suffix = student.roll_no[len(prefix):].strip()
+            if suffix.isdigit():
+                next_number = max(next_number, int(suffix) + 1)
+        return f'{prefix}{next_number}'
+
     def __str__(self):
         return f'{self.roll_no} — {self.name}'
 

@@ -63,10 +63,17 @@ class StudentForm(forms.ModelForm):
         model = Student
         fields = ['roll_no', 'name', 'father_name', 'section', 'phone', 'remarks']
 
-    def __init__(self, *args, class_level=None, **kwargs):
+    def __init__(self, *args, class_level=None, gender=None, academy=None, **kwargs):
         if class_level is None and 'instance' in kwargs and kwargs['instance'] is not None:
             class_level = getattr(kwargs['instance'], 'class_level', None)
+        if gender is None and 'instance' in kwargs and kwargs['instance'] is not None:
+            gender = getattr(kwargs['instance'], 'gender', None)
+        if academy is None and 'instance' in kwargs and kwargs['instance'] is not None:
+            academy = getattr(kwargs['instance'], 'academy', None)
+
         self.class_level = class_level
+        self.gender = gender
+        self.academy = academy
         super().__init__(*args, **kwargs)
 
         if class_level in (9, 10):
@@ -82,6 +89,19 @@ class StudentForm(forms.ModelForm):
             required=True,
         )
 
+        if self.class_level is not None and self.gender:
+            if self.instance.pk:
+                self.fields['roll_no'].widget.attrs.update({'readonly': 'readonly'})
+            elif self.academy is not None:
+                self.fields['roll_no'].initial = Student.get_next_roll_no(
+                    self.academy,
+                    self.class_level,
+                    self.gender,
+                )
+                self.fields['roll_no'].widget.attrs.update({
+                    'readonly': 'readonly',
+                })
+
     def clean(self):
         cleaned = super().clean()
         roll_no = cleaned.get('roll_no', '').strip()
@@ -89,6 +109,10 @@ class StudentForm(forms.ModelForm):
         academy = getattr(self.instance, 'academy', None)
         class_level = getattr(self.instance, 'class_level', None)
         gender = getattr(self.instance, 'gender', None)
+
+        if not roll_no and academy and class_level is not None and gender:
+            roll_no = Student.get_next_roll_no(academy, class_level, gender)
+            cleaned['roll_no'] = roll_no
 
         if academy and class_level is not None and gender:
             existing_roll = None

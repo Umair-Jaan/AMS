@@ -19,6 +19,15 @@
 
 <div class="card">
     <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Fee history</h2>
+    {% if not readonly %}
+    <form method="get" style="margin-bottom: 1.25rem; display: grid; gap: 0.75rem; max-width: 420px;">
+        <div style="display: grid; gap: 0.5rem;">
+            <label for="fee_due_date_input">Search by due date</label>
+            <input type="date" id="fee_due_date_input" name="fee_due_date_input" value="{{ fee_due_date_input }}" />
+        </div>
+        <button type="submit" style="width: fit-content; padding: 0.65rem 1rem;">Search</button>
+    </form>
+    {% endif %}
     {% if records %}
     <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse: collapse;">
