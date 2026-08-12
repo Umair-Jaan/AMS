@@ -167,6 +167,146 @@
     </form>
 </details>
 
+<details class="panel result-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
+    <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
+        <span style="font-size: 1.1rem; font-weight: 600;">Add result</span>
+        <span style="color: var(--accent); font-size: 0.95rem;">Open panel</span>
+    </summary>
+    <form method="post" style="margin-top: 1.25rem;">
+        {% csrf_token %}
+        <input type="hidden" name="result_action" value="save_results" />
+        <div style="display: grid; gap: 1rem; margin-bottom: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+            <div style="display: grid; gap: 0.75rem;">
+                <label for="result_from_date">From</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="text" id="result_from_date" name="result_from_date" placeholder="mm/dd/yyyy" style="flex:1; padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
+                    <input type="date" id="result_from_date_picker" onchange="document.getElementById('result_from_date').value = this.value ? this.value : '';" style="padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
+                </div>
+            </div>
+            <div style="display: grid; gap: 0.75rem;">
+                <label for="result_to_date">To</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="text" id="result_to_date" name="result_to_date" placeholder="mm/dd/yyyy" style="flex:1; padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
+                    <input type="date" id="result_to_date_picker" onchange="document.getElementById('result_to_date').value = this.value ? this.value : '';" style="padding: 0.75rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: #0f172a; color: var(--text);" />
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin: 0; padding: 1rem; overflow-x:auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 1120px;">
+                <thead>
+                    <tr>
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Roll</th>
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Name</th>
+                        {% for col in result_columns %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Subject {{ col }}</th>
+                        {% endfor %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Actions</th>
+                    </tr>
+                    <tr>
+                        <th colspan="2" style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Select subject</th>
+                        {% for col in result_columns %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">
+                            <select name="subject_{{ col }}" class="result-subject-select" data-col="{{ col }}" style="width:100%; padding:0.65rem 0.9rem; border-radius:8px; border:1px solid var(--border); background:#0f172a; color:var(--text);">
+                                <option value="">-- select subject --</option>
+                                {% for subject in result_subject_choices %}
+                                <option value="{{ subject }}">{{ subject }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="subject-label" data-col="{{ col }}" style="display:none; margin-top:0.35rem; font-weight:700;"></div>
+                        </th>
+                        {% endfor %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Total marks</th>
+                    </tr>
+                    <tr>
+                        <th colspan="2" style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Enter total marks</th>
+                        {% for col in result_columns %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">
+                            <input type="number" name="total_marks_{{ col }}" class="result-total-marks" data-col="{{ col }}" min="0" placeholder="0" style="width:100%; padding:0.65rem 0.9rem; border-radius:8px; border:1px solid var(--border); background:#0f172a; color:var(--text);" />
+                        </th>
+                        {% endfor %}
+                        <th style="padding: 0.75rem; border-bottom:1px solid var(--border);"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in students %}
+                    <tr data-student-id="{{ s.pk }}">
+                        <td style="padding: 0.75rem; border-bottom:1px solid var(--border);">{{ s.roll_no }}</td>
+                        <td style="padding: 0.75rem; border-bottom:1px solid var(--border);">{{ s.name }}</td>
+                        {% for col in result_columns %}
+                        <td style="padding: 0.75rem; border-bottom:1px solid var(--border);">
+                            <div style="display:grid; gap:0.35rem;">
+                                <select name="marks_{{ s.pk }}_{{ col }}" class="student-result-mark-select" data-student-id="{{ s.pk }}" data-col="{{ col }}" style="width:100%; padding:0.65rem 0.9rem; border-radius:8px; border:1px solid var(--border); background:#0f172a; color:var(--text);">
+                                    <option value="">-- select --</option>
+                                </select>
+                                <span class="student-result-mark-label" data-student-id="{{ s.pk }}" data-col="{{ col }}" style="display:none; font-weight:700;"></span>
+                            </div>
+                        </td>
+                        {% endfor %}
+                        <td style="padding: 0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                            <button type="button" class="mini-panel edit-result" style="padding: 0.5rem 0.8rem;">Edit</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+            <button type="submit" style="padding:0.75rem 1rem;">Save Results</button>
+        </div>
+    </form>
+</details>
+
+<details class="panel see-result-panel" style="padding: 1.5rem 1.5rem; margin-bottom: 1.5rem;">
+    <summary style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; list-style: none;">
+        <span style="font-size: 1.1rem; font-weight: 600;">See result</span>
+        <span style="color: var(--accent); font-size: 0.95rem;">Open panel</span>
+    </summary>
+    <div style="margin-top: 1.25rem; overflow-x:auto;">
+        <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
+            {% if result_records %}
+            <table style="width:100%; border-collapse: collapse; min-width: 960px;">
+                <thead>
+                    <tr>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Subject</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Date</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Obtained</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Notes</th>
+                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in result_records %}
+                    <tr>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.student.roll_no }} - {{ record.student.name }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.subject }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.exam_date|date:"m/d/Y"|default:"—" }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.marks_obtained }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.total_marks }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.percentage }}%</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ record.note|default:"—" }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                            <form method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="result_action" value="delete_result" />
+                                <input type="hidden" name="result_id" value="{{ record.pk }}" />
+                                <button type="submit" class="mini-panel delete">Remove</button>
+                            </form>
+                            <button type="button" class="mini-panel edit-result-record" data-record-id="{{ record.pk }}" style="margin-left:0.5rem;">Edit</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color: var(--muted);">No saved results yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</details>
+
 {# Session entries are intentionally not shown on the class page. #}
 
 <div class="card">
@@ -365,6 +505,139 @@
                     if (hiddenAmount) hiddenAmount.value = '';
                 });
             }
+        });
+
+        function buildScoreOptions(maxScore) {
+            const fragment = document.createDocumentFragment();
+            const empty = document.createElement('option');
+            empty.value = '';
+            empty.textContent = '-- select --';
+            fragment.appendChild(empty);
+            for (let i = 0; i <= maxScore; i += 1) {
+                const option = document.createElement('option');
+                option.value = String(i);
+                option.textContent = String(i);
+                fragment.appendChild(option);
+            }
+            return fragment;
+        }
+
+        function refreshStudentSelectsForColumn(col, maxScore) {
+            const markSelects = document.querySelectorAll(`.student-result-mark-select[data-col="${col}"]`);
+            markSelects.forEach(function(select) {
+                const currentValue = select.value;
+                select.innerHTML = '';
+                const options = buildScoreOptions(maxScore);
+                select.appendChild(options.cloneNode(true));
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function setSubjectColumn(col, subject) {
+            const subjectSelect = document.querySelector(`.result-subject-select[data-col="${col}"]`);
+            const label = document.querySelector(`.subject-label[data-col="${col}"]`);
+            if (!subjectSelect || !label) return;
+            if (subject) {
+                subjectSelect.style.display = 'none';
+                label.textContent = subject;
+                label.style.display = 'block';
+            } else {
+                subjectSelect.style.display = 'block';
+                label.textContent = '';
+                label.style.display = 'none';
+            }
+        }
+
+        document.querySelectorAll('.result-subject-select').forEach(function(select) {
+            select.addEventListener('change', function() {
+                const col = select.dataset.col;
+                const subject = select.value;
+                setSubjectColumn(col, subject);
+                const totalField = document.querySelector(`.result-total-marks[data-col="${col}"]`);
+                const maxScore = Math.max(0, parseInt(totalField.value, 10) || 0);
+                if (maxScore > 0) {
+                    refreshStudentSelectsForColumn(col, maxScore);
+                }
+            });
+        });
+
+        document.querySelectorAll('.result-total-marks').forEach(function(input) {
+            input.addEventListener('input', function() {
+                const col = input.dataset.col;
+                const maxScore = Math.max(0, parseInt(input.value, 10) || 0);
+                if (maxScore >= 0) {
+                    refreshStudentSelectsForColumn(col, maxScore);
+                }
+            });
+        });
+
+        document.querySelectorAll('.student-result-mark-select').forEach(function(select) {
+            select.addEventListener('change', function() {
+                const value = select.value;
+                const col = select.dataset.col;
+                const studentId = select.dataset.studentId;
+                const label = document.querySelector(`.student-result-mark-label[data-student-id="${studentId}"][data-col="${col}"]`);
+                if (value !== '') {
+                    select.style.display = 'none';
+                    if (label) {
+                        label.textContent = value;
+                        label.style.display = 'block';
+                    }
+                } else {
+                    if (label) {
+                        label.style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll('.edit-result').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const row = button.closest('tr');
+                if (!row) return;
+                const selects = row.querySelectorAll('.student-result-mark-select');
+                const labels = row.querySelectorAll('.student-result-mark-label');
+                const hasHidden = Array.from(labels).some(l => l.style.display === 'block');
+                if (!hasHidden) {
+                    return;
+                }
+                selects.forEach(function(select) {
+                    select.style.display = 'block';
+                });
+                labels.forEach(function(label) {
+                    label.style.display = 'none';
+                });
+            });
+        });
+
+        document.querySelectorAll('.edit-result-record').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const recordId = button.dataset.recordId;
+                const row = document.querySelector(`tr[data-record-id="${recordId}"]`);
+                if (!row) return;
+                const inputMark = row.querySelector('.record-marks-input');
+                const inputTotal = row.querySelector('.record-total-input');
+                const labelMark = row.querySelector('.record-marks-label');
+                const labelTotal = row.querySelector('.record-total-label');
+                const form = row.querySelector('.edit-result-form');
+                if (!form || !inputMark || !inputTotal || !labelMark || !labelTotal) return;
+
+                if (button.dataset.editing === 'true') {
+                    form.querySelector('.edit-marks-hidden').value = inputMark.value;
+                    form.querySelector('.edit-total-hidden').value = inputTotal.value;
+                    form.submit();
+                    return;
+                }
+
+                labelMark.style.display = 'none';
+                labelTotal.style.display = 'none';
+                inputMark.style.display = 'inline-block';
+                inputTotal.style.display = 'inline-block';
+                button.dataset.editing = 'true';
+                button.textContent = 'Save';
+            });
         });
 
         // No initial application of saved values; keep live status empty.

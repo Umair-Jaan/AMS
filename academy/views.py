@@ -423,6 +423,105 @@ def class_students(request, grade, gender):
             messages.success(request, 'Fee panel data saved.')
             return redirect('class_students', grade=grade, gender=gender)
 
+        if request.POST.get('result_action') == 'save_results':
+            from decimal import Decimal
+            date_from_raw = request.POST.get('result_from_date', '').strip()
+            date_to_raw = request.POST.get('result_to_date', '').strip()
+            from_label = date_from_raw
+            to_label = date_to_raw
+            exam_date = None
+            if date_to_raw:
+                try:
+                    exam_date = datetime.strptime(date_to_raw, '%m/%d/%Y').date()
+                except (TypeError, ValueError):
+                    exam_date = None
+
+            selected_subjects = []
+            for idx in range(1, 7):
+                subject = request.POST.get(f'subject_{idx}', '').strip()
+                total_raw = request.POST.get(f'total_marks_{idx}', '').strip()
+                if not subject:
+                    continue
+                try:
+                    total_marks = Decimal(total_raw)
+                except (TypeError, ValueError):
+                    total_marks = Decimal('0')
+                if total_marks <= 0:
+                    continue
+                selected_subjects.append({
+                    'subject': subject,
+                    'total_marks': total_marks,
+                })
+
+            if not selected_subjects:
+                messages.error(request, 'Please select at least one subject and total marks to save results.')
+                return redirect('class_students', grade=grade, gender=gender)
+
+            saved_count = 0
+            for student in students:
+                for col_idx, subject_info in enumerate(selected_subjects, 1):
+                    marks_raw = request.POST.get(f'marks_{student.pk}_{col_idx}', '').strip()
+                    if marks_raw == '':
+                        continue
+                    try:
+                        marks_obtained = Decimal(marks_raw)
+                    except (TypeError, ValueError):
+                        continue
+                    if marks_obtained < 0:
+                        continue
+
+                    defaults = {
+                        'marks_obtained': marks_obtained,
+                        'total_marks': subject_info['total_marks'],
+                        'term': 'monthly',
+                        'note': f'{from_label} to {to_label}' if from_label or to_label else '',
+                    }
+                    ResultRecord.objects.update_or_create(
+                        student=student,
+                        subject=subject_info['subject'],
+                        exam_date=exam_date,
+                        defaults=defaults,
+                    )
+                    saved_count += 1
+
+            if saved_count:
+                messages.success(request, f'Saved {saved_count} student result values.')
+            else:
+                messages.warning(request, 'No student result values were provided.')
+            return redirect('class_students', grade=grade, gender=gender)
+
+        if request.POST.get('result_action') == 'edit_result':
+            from decimal import Decimal, InvalidOperation
+            record_id = request.POST.get('result_id')
+            marks_raw = request.POST.get('edit_marks_obtained', '').strip()
+            if record_id and marks_raw:
+                try:
+                    record = ResultRecord.objects.select_related('student').get(pk=record_id)
+                    if record.student.academy == academy and record.student.class_level == grade and record.student.gender == gender:
+                        record.marks_obtained = Decimal(marks_raw)
+                        total_raw = request.POST.get('edit_total_marks', '').strip()
+                        try:
+                            record.total_marks = Decimal(total_raw)
+                        except (TypeError, ValueError):
+                            pass
+                        record.save()
+                        messages.success(request, 'Result updated.')
+                except (ResultRecord.DoesNotExist, InvalidOperation):
+                    messages.error(request, 'Unable to update the result record.')
+            return redirect('class_students', grade=grade, gender=gender)
+
+        if request.POST.get('result_action') == 'delete_result':
+            record_id = request.POST.get('result_id')
+            if record_id:
+                try:
+                    record = ResultRecord.objects.select_related('student').get(pk=record_id)
+                    if record.student.academy == academy and record.student.class_level == grade and record.student.gender == gender:
+                        record.delete()
+                        messages.success(request, 'Result record removed.')
+                except ResultRecord.DoesNotExist:
+                    messages.error(request, 'Result record not found.')
+            return redirect('class_students', grade=grade, gender=gender)
+
         form = StudentForm(
             request.POST,
             class_level=grade,
@@ -452,6 +551,20 @@ def class_students(request, grade, gender):
         attendance_date_input,
     )
 
+    result_records = ResultRecord.objects.filter(student__in=students).select_related('student').order_by('student__roll_no', 'subject')
+    subject_choices = [
+        'English',
+        'Urdu',
+        'Math',
+        'Chemistry',
+        'Islamiat',
+        'T Quran',
+        'Physics',
+        'Computer',
+        'Economics',
+    ]
+    result_columns = range(1, 7)
+
     # class page should not display saved session entries; sessions are
     # displayed on the individual student's attendance page instead.
     session_entries = None
@@ -469,6 +582,9 @@ def class_students(request, grade, gender):
         'attendance_date_display': _format_display_date(attendance_date_input),
         'attendance_values_json': json.dumps(attendance_values),
         'session_entries': session_entries,
+        'result_records': result_records,
+        'result_subject_choices': subject_choices,
+        'result_columns': result_columns,
     })
 
 
