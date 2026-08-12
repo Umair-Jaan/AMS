@@ -18,40 +18,6 @@
 </div>
 
 <div class="card" style="display: grid; gap: 1.5rem;">
-    <div style="display: grid; gap: 1rem;">
-        <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Daily attendance</h2>
-        {# Date selection removed for session attendance; date is shown per-session entry below. #}
-    </div>
-
-    {% if not readonly and not session_entries %}
-    <div style="display: grid; gap: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-            <div>
-                <h3 style="margin: 0; font-size: 1rem;">Mark attendance</h3>
-                <p style="margin: 0.5rem 0 0; color: var(--muted);">Current date: {{ attendance_date_display }}</p>
-            </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <span style="padding: 0.5rem 0.75rem; border-radius: 10px; background: rgba(255,255,255,0.05);">Status: <strong>{{ daily_status }}</strong></span>
-            </div>
-        </div>
-        <form method="post" style="display: grid; gap: 1rem; max-width: 560px;">
-            {% csrf_token %}
-            <input type="hidden" name="attendance_action" value="save_daily" />
-            <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
-            <input type="hidden" name="status" id="daily_attendance_status" value="{{ daily_status }}" />
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <button type="button" id="daily_present_button" class="btn" style="background: #16a34a; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Present</button>
-                <button type="button" id="daily_absent_button" class="btn" style="background: #b91c1c; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Absent</button>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <strong>Selected status:</strong>
-                <span id="daily_status_display" style="font-weight: 700;">{{ daily_status }}</span>
-            </div>
-            <button type="submit" style="width: fit-content; padding: 0.75rem 1rem;">Save Daily Attendance</button>
-        </form>
-    </div>
-    {% endif %}
-
     <form method="get" style="margin-top: 1rem; display: grid; gap: 0.75rem; max-width: 480px;">
         <div style="display: grid; gap: 0.5rem;">
             <label for="attendance_history_search_type">Search session attendance by</label>
@@ -127,27 +93,6 @@
         </div>
     </div>
     {% endif %}
-
-    {% if not readonly %}
-    <div style="display: grid; gap: 1rem; padding: 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 14px;">
-        <h2 style="margin: 0; font-size: 1.1rem;">Mark student attendance</h2>
-        <form method="post" style="display: grid; gap: 1rem; max-width: 560px;">
-            {% csrf_token %}
-            <input type="hidden" name="attendance_action" value="save_daily" />
-            <input type="hidden" name="attendance_date_input" value="{{ attendance_date_input }}" />
-            <input type="hidden" name="status" id="daily_attendance_status" value="{{ daily_status }}" />
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                <button type="button" id="daily_present_button" class="btn" style="background: #16a34a; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Present</button>
-                <button type="button" id="daily_absent_button" class="btn" style="background: #b91c1c; color: #fff; border-radius: 10px; padding: 0.75rem 1rem;">Absent</button>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <strong>Selected status:</strong>
-                <span id="daily_status_display" style="font-weight: 700;">{{ daily_status }}</span>
-            </div>
-            <button type="submit" style="width: fit-content; padding: 0.75rem 1rem;">Save Daily Attendance</button>
-        </form>
-    </div>
-    {% endif %}
 </div>
 
 <div class="card">
@@ -184,37 +129,6 @@
             {% endfor %}
         </tbody>
     </table>
-    {% else %}
-    <p style="color: var(--muted);">No attendance records yet.</p>
     {% endif %}
 </div>
-
-<script>
-    (function() {
-        const presentButton = document.getElementById('daily_present_button');
-        const absentButton = document.getElementById('daily_absent_button');
-        const statusInput = document.getElementById('daily_attendance_status');
-        const statusDisplay = document.getElementById('daily_status_display');
-
-        if (presentButton && absentButton && statusInput && statusDisplay) {
-            presentButton.addEventListener('click', function() {
-                statusInput.value = 'P';
-                statusDisplay.textContent = 'P';
-                presentButton.style.opacity = '1';
-                absentButton.style.opacity = '0.6';
-            });
-            absentButton.addEventListener('click', function() {
-                statusInput.value = 'A';
-                statusDisplay.textContent = 'A';
-                absentButton.style.opacity = '1';
-                presentButton.style.opacity = '0.6';
-            });
-        }
-    })();
-
-        updateMonthlyAbsent();
-    })();
-</script>
 {% endblock %}
-
-<template id="month_days_data">{{ month_days_json|safe }}</template>
