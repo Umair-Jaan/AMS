@@ -212,14 +212,6 @@ def _student_attendance_view(request, student_id, readonly=False):
         if not student:
             return redirect('home')
 
-    attendance_date_input = request.GET.get('attendance_date_input', date.today().isoformat())
-    attendance_date_label = _format_display_date(attendance_date_input)
-    daily_record = AttendanceRecord.objects.filter(
-        student=student,
-        month=attendance_date_label,
-    ).first()
-    daily_status = 'P' if daily_record and daily_record.days_present else 'A'
-
     history_search_type = request.GET.get('attendance_history_search_type', 'date')
     history_date_input = request.GET.get('attendance_history_date_input', date.today().isoformat())
     history_month = request.GET.get('attendance_history_month', date.today().strftime('%B'))
@@ -251,46 +243,15 @@ def _student_attendance_view(request, student_id, readonly=False):
                 session__date_label__contains=f'/{month_number}/{history_year}'
             )
 
-    if not readonly and request.method == 'POST':
-        action = request.POST.get('attendance_action')
-        if action == 'save_daily':
-            attendance_date = request.POST.get('attendance_date_input', attendance_date_input).strip()
-            try:
-                attendance_date_obj = date.fromisoformat(attendance_date)
-                record_label = attendance_date_obj.strftime('%d/%m/%Y')
-                attendance_date = attendance_date_obj.isoformat()
-            except (TypeError, ValueError):
-                record_label = date.today().strftime('%d/%m/%Y')
-                attendance_date = date.today().isoformat()
-
-            status = request.POST.get('status', 'A')
-            days_present = 1 if status == 'P' else 0
-            AttendanceRecord.objects.update_or_create(
-                student=student,
-                month=record_label,
-                defaults={
-                    'days_present': days_present,
-                    'days_total': 1,
-                },
-            )
-            messages.success(request, 'Daily attendance saved.')
-            query_string = urlencode({'attendance_date_input': attendance_date})
-            return redirect(f'{reverse("student_attendance", kwargs={"student_id": student_id})}?{query_string}')
-
     history_month_options = list(MONTH_DAYS.keys())
     year_options = [str(y) for y in range(date.today().year - 3, date.today().year + 3)]
 
     return render(request, 'academy/student_attendance.html', {
         'student': student,
         'academy': academy,
-        'records': records,
         'readonly': readonly,
         'grade': student.class_level,
         'gender': student.gender,
-        'attendance_date_input': attendance_date_input,
-        'attendance_date_display': attendance_date_label,
-        'daily_record': daily_record,
-        'daily_status': daily_status,
         'session_entries': session_entries,
         'history_month_options': history_month_options,
         'history_search_type': history_search_type,
