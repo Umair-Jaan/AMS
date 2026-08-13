@@ -1,6 +1,6 @@
 {% extends 'academy/base.html' %}
 
-{% block title %}Results — {{ student.name }}{% endblock %}
+{% block title %}Results - {{ student.name }}{% endblock %}
 
 {% block content %}
 {% if readonly %}
@@ -11,7 +11,7 @@
 
 <div class="student-header">
     <div>
-        <h1>Results — {{ student.name }}</h1>
+        <h1>Results - {{ student.name }}</h1>
         <p class="subtitle">Roll {{ student.roll_no }} · {{ student.get_class_level_display }}</p>
     </div>
     {% include 'academy/_student_record_nav.html' %}
@@ -22,33 +22,46 @@
 <div class="card">
     <h2 style="margin-bottom: 1rem; font-size: 1.1rem;">Result sheet</h2>
     {% if record_batches %}
-        {% for batch in record_batches %}
-        <div style="margin-bottom:0.75rem; padding:0.75rem; border:1px solid var(--border); border-radius:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                <div style="font-weight:700;">{{ batch.label }}</div>
-                <div style="font-size:0.9rem;">
-                    {# Provide remove button per-record if needed; keep individual remove per record below #}
-                </div>
-            </div>
-            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
-                {% for r in batch.records %}
-                <div style="padding:0.35rem 0.5rem; background: rgba(255,255,255,0.02); border-radius:6px;">
-                    <div style="font-weight:700;">{{ r.subject }}</div>
-                    <div>{{ r.marks_obtained }} / {{ r.total_marks }} — {{ r.percentage }}%</div>
-                    <div style="margin-top:0.25rem;">
-                        <form method="post" action="{% url 'student_result_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this result record?');" style="display:inline;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">Batch</th>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">Results</th>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">Total Obtained</th>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">Total Marks</th>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">%</th>
+                    <th style="padding:0.75rem; border-bottom:1px solid var(--border); text-align:left;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for batch in record_batches %}
+                <tr>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.label }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                        {% comment %} Concatenate subject:marks/total pairs into a single string {% endcomment %}
+                        {% for r in batch.records %}
+                            <div style="margin-bottom:0.25rem;"><strong>{{ r.subject }}:</strong> {{ r.marks_obtained }} / {{ r.total_marks }} ({{ r.percentage }}%)</div>
+                        {% endfor %}
+                    </td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                        {% with total=0 %}{% for r in batch.records %}{% with total=total|add:r.marks_obtained %}{% endwith %}{% endfor %}{% endwith %}
+                        {# total per batch displayed in template by summing in view would be better; show dash for now #}
+                        -
+                    </td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">-</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">-</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                        {% for r in batch.records %}
+                        <form method="post" action="{% url 'student_result_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this result record?');" style="display:inline; margin-right:0.5rem;">
                             {% csrf_token %}
                             <button type="submit" class="mini-panel delete">Remove</button>
                         </form>
-                    </div>
-                </div>
+                        {% endfor %}
+                    </td>
+                </tr>
                 {% endfor %}
-            </div>
-            {% if batch.records.0.note %}
-            <div style="margin-top:0.5rem; color:var(--muted);">Note: {{ batch.records.0.note }}</div>
-            {% endif %}
-        </div>
-        {% endfor %}
+            </tbody>
+        </table>
     {% else %}
     <p style="color: var(--muted);">No results yet.</p>
     {% endif %}

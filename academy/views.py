@@ -478,30 +478,30 @@ def class_students(request, grade, gender):
                 except (TypeError, ValueError):
                     exam_date = None
 
-            selected_subjects = []
+            # Preserve column positions so marks_<studentid>_<col> maps correctly.
+            selected_subjects = [None] * 6
             for idx in range(1, 7):
                 subject = request.POST.get(f'subject_{idx}', '').strip()
                 total_raw = request.POST.get(f'total_marks_{idx}', '').strip()
-                if not subject:
-                    continue
                 try:
                     total_marks = Decimal(total_raw)
                 except (TypeError, ValueError):
                     total_marks = Decimal('0')
-                if total_marks <= 0:
-                    continue
-                selected_subjects.append({
-                    'subject': subject,
-                    'total_marks': total_marks,
-                })
+                if subject and total_marks > 0:
+                    selected_subjects[idx - 1] = {
+                        'subject': subject,
+                        'total_marks': total_marks,
+                    }
 
-            if not selected_subjects:
+            if not any(selected_subjects):
                 messages.error(request, 'Please select at least one subject and total marks to save results.')
                 return redirect('class_students', grade=grade, gender=gender)
 
             saved_count = 0
             for student in students:
                 for col_idx, subject_info in enumerate(selected_subjects, 1):
+                    if not subject_info:
+                        continue
                     marks_raw = request.POST.get(f'marks_{student.pk}_{col_idx}', '').strip()
                     if marks_raw == '':
                         continue
