@@ -483,7 +483,7 @@ def class_students(request, grade, gender):
             return redirect('class_students', grade=grade, gender=gender)
 
         if request.POST.get('result_action') == 'save_results':
-            from decimal import Decimal
+            from decimal import Decimal, InvalidOperation
             date_from_raw = request.POST.get('result_from_date', '').strip()
             date_to_raw = request.POST.get('result_to_date', '').strip()
             # Require at least one date field (From/To) to be provided so batches are identifiable
@@ -506,7 +506,7 @@ def class_students(request, grade, gender):
                 total_raw = request.POST.get(f'total_marks_{idx}', '').strip()
                 try:
                     total_marks = Decimal(total_raw)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, InvalidOperation):
                     total_marks = Decimal('0')
                 # Accept a selected subject even if total_marks is empty/0.
                 if subject:
@@ -539,7 +539,7 @@ def class_students(request, grade, gender):
                         continue
                     try:
                         marks_obtained = Decimal(marks_raw)
-                    except (TypeError, ValueError):
+                    except (TypeError, ValueError, InvalidOperation):
                         continue
                     if marks_obtained < 0:
                         continue
