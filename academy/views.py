@@ -226,9 +226,30 @@ def _handle_record_view(
                 batches.setdefault(label, []).append(r)
             record_batches = []
             for label, recs in batches.items():
+                # Compute per-record percentage and batch totals
+                total_obtained = 0
+                total_marks = 0
+                for r in recs:
+                    try:
+                        r.percentage = round(float(r.marks_obtained) / float(r.total_marks) * 100, 1) if r.total_marks else 0
+                    except Exception:
+                        r.percentage = 0
+                    try:
+                        total_obtained += r.marks_obtained or 0
+                    except Exception:
+                        pass
+                    try:
+                        total_marks += r.total_marks or 0
+                    except Exception:
+                        pass
+
+                batch_percentage = round(float(total_obtained) / float(total_marks) * 100, 1) if total_marks else 0
                 record_batches.append({
                     'label': label,
                     'records': recs,
+                    'total_obtained': total_obtained,
+                    'total_marks': total_marks,
+                    'percentage': batch_percentage,
                 })
             context['record_batches'] = record_batches
         except Exception:
@@ -487,7 +508,8 @@ def class_students(request, grade, gender):
                     total_marks = Decimal(total_raw)
                 except (TypeError, ValueError):
                     total_marks = Decimal('0')
-                if subject and total_marks > 0:
+                # Accept a selected subject even if total_marks is empty/0.
+                if subject:
                     selected_subjects[idx - 1] = {
                         'subject': subject,
                         'total_marks': total_marks,

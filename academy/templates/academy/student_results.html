@@ -38,18 +38,13 @@
                 <tr>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.label }}</td>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                        {% comment %} Concatenate subject:marks/total pairs into a single string {% endcomment %}
                         {% for r in batch.records %}
                             <div style="margin-bottom:0.25rem;"><strong>{{ r.subject }}:</strong> {{ r.marks_obtained }} / {{ r.total_marks }} ({{ r.percentage }}%)</div>
                         {% endfor %}
                     </td>
-                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                        {% with total=0 %}{% for r in batch.records %}{% with total=total|add:r.marks_obtained %}{% endwith %}{% endfor %}{% endwith %}
-                        {# total per batch displayed in template by summing in view would be better; show dash for now #}
-                        -
-                    </td>
-                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">-</td>
-                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">-</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.total_obtained }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.total_marks }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.percentage }}%</td>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
                         {% for r in batch.records %}
                         <form method="post" action="{% url 'student_result_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this result record?');" style="display:inline; margin-right:0.5rem;">
