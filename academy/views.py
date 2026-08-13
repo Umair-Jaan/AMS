@@ -544,6 +544,16 @@ def class_students(request, grade, gender):
                 except ResultRecord.DoesNotExist:
                     messages.error(request, 'Result record not found.')
             return redirect('class_students', grade=grade, gender=gender)
+        if request.POST.get('result_action') == 'delete_student_results':
+            student_id_post = request.POST.get('student_id')
+            if student_id_post:
+                try:
+                    student_obj = Student.objects.get(pk=student_id_post, academy=academy, class_level=grade, gender=gender)
+                    ResultRecord.objects.filter(student=student_obj).delete()
+                    messages.success(request, f'All result records removed for {student_obj.name}.')
+                except Student.DoesNotExist:
+                    messages.error(request, 'Student not found.')
+            return redirect('class_students', grade=grade, gender=gender)
 
         form = StudentForm(
             request.POST,
