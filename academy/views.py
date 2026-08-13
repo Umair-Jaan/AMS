@@ -661,6 +661,7 @@ def class_students(request, grade, gender):
                 records_by_subject.get(subject) if records_by_subject.get(subject) is not None else None
                 for subject in result_subjects
             ],
+            'note': next((r.note for r in records if getattr(r, 'note', None)), ''),
             'total_obtained': total_obtained,
             'total_marks': total_marks,
             'percentage': percentage,
@@ -697,6 +698,7 @@ def class_students(request, grade, gender):
         'result_subject_choices': subject_choices,
         'result_columns': result_columns,
         'result_subjects': result_subjects,
+        'results_date_range': result_records.exclude(note='').order_by('-id').values_list('note', flat=True).first() if result_records.exists() else '',
         'max_total_by_subject': max_total_by_subject,
         'max_result_total': int(max_result_total),
         'student_results': student_results,

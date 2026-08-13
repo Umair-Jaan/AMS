@@ -262,6 +262,9 @@
     <div style="margin-top: 1.25rem; overflow-x:auto;">
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
             {% if student_results %}
+            {% if results_date_range %}
+            <div style="margin-bottom:0.5rem; font-weight:700;">Results date: {{ results_date_range }}</div>
+            {% endif %}
             <table style="width:100%; border-collapse: collapse; min-width: 960px;">
                 <thead>
                     <tr>
@@ -278,7 +281,12 @@
                 <tbody>
                     {% for row in student_results %}
                     <tr data-student-id="{{ row.student.pk }}">
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.student.roll_no }} - {{ row.student.name }}</td>
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                            <div>{{ row.student.roll_no }} - {{ row.student.name }}</div>
+                            {% if row.note %}
+                            <div style="font-size:0.85rem; color:var(--muted);">{{ row.note }}</div>
+                            {% endif %}
+                        </td>
                         {% for record in row.subject_records %}
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
                             <span class="record-label">{% if record %}{{ record.marks_obtained }}{% else %}{% endif %}</span>
