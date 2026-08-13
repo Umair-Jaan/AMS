@@ -261,6 +261,9 @@
     <div style="margin-top: 1.25rem; overflow-x:auto;">
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
             {% if student_results %}
+            <form method="post" id="results_table_form">
+                {% csrf_token %}
+                <input type="hidden" name="result_action" value="edit_bulk" id="results_action_field" />
             <table style="width:100%; border-collapse: collapse; min-width: 960px;">
                 <thead>
                     <tr>
@@ -276,26 +279,43 @@
                 </thead>
                 <tbody>
                     {% for row in student_results %}
-                    <tr>
+                    <tr data-student-id="{{ row.student.pk }}">
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.student.roll_no }} - {{ row.student.name }}</td>
-                        {% for value in row.subject_values %}
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ value }}</td>
+                        {% for i in result_subjects %}
+                        {% with record=row.records|get:i %}
+                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                            <span class="record-label">{{ record.marks_obtained if record else '' }}</span>
+                            {% if record %}
+                            <select name="record_{{ record.pk }}" class="record-edit-select" style="display:none; width:100%; padding:0.35rem;">
+                                <option value="">--</option>
+                                {% for n in max_result_total|add:1|make_list %}
+                                    {# build numeric options up to max_result_total #}
+                                {% endfor %}
+                            </select>
+                            {% endif %}
+                        </td>
+                        {% endwith %}
                         {% endfor %}
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
-                            <form method="post" onsubmit="return confirm('Remove all results for {{ row.student.name }}?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="result_action" value="delete_student_results" />
-                                <input type="hidden" name="student_id" value="{{ row.student.pk }}" />
-                                <button type="submit" class="mini-panel delete">Remove</button>
-                            </form>
+                            <button type="button" class="mini-panel edit-results-row">Edit</button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center;">
+                <button type="button" id="edit_all_btn" class="mini-panel">Edit All</button>
+                <button type="submit" id="save_edits_btn" class="mini-panel" style="display:none;">Save Edits</button>
+                <form method="post" id="delete_table_form" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="result_action" value="delete_all_results" />
+                    <button type="submit" class="mini-panel delete" onclick="return confirm('Remove all saved results for this class?');">Remove table</button>
+                </form>
+            </div>
+            </form>
             {% else %}
             <p style="color: var(--muted);">No saved results yet.</p>
             {% endif %}
@@ -698,6 +718,47 @@
                 button.textContent = 'Save';
             });
         });
+
+        // New: Edit All / Save Edits for results table
+        const editAllBtn = document.getElementById('edit_all_btn');
+        const saveEditsBtn = document.getElementById('save_edits_btn');
+        const resultsForm = document.getElementById('results_table_form');
+        if (editAllBtn) {
+            editAllBtn.addEventListener('click', function() {
+                // Show all selects for records
+                document.querySelectorAll('.record-edit-select').forEach(function(sel) {
+                    // populate options up to max_result_total
+                    if (sel.options.length <= 1) {
+                        const max = parseInt('{{ max_result_total }}', 10) || 0;
+                        for (let i = 0; i <= max; i++) {
+                            const opt = document.createElement('option');
+                            opt.value = String(i);
+                            opt.textContent = String(i);
+                            sel.appendChild(opt);
+                        }
+                        // set current value if label present
+                        const label = sel.previousElementSibling;
+                        if (label && label.textContent.trim() !== '') {
+                            sel.value = label.textContent.trim();
+                        }
+                    }
+                    sel.style.display = 'block';
+                });
+                document.querySelectorAll('.record-label').forEach(function(l) { l.style.display = 'none'; });
+                editAllBtn.style.display = 'none';
+                saveEditsBtn.style.display = 'inline-block';
+                // change hidden action to edit_bulk
+                const actionField = document.getElementById('results_action_field');
+                if (actionField) actionField.value = 'edit_bulk';
+            });
+        }
+
+        if (saveEditsBtn) {
+            saveEditsBtn.addEventListener('click', function() {
+                // simply submit the form (results_form) which contains selects named record_<id>
+                if (resultsForm) resultsForm.submit();
+            });
+        }
     })();
 </script>
 {% endblock %}

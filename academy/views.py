@@ -555,6 +555,43 @@ def class_students(request, grade, gender):
                     messages.error(request, 'Student not found.')
             return redirect('class_students', grade=grade, gender=gender)
 
+        if request.POST.get('result_action') == 'delete_all_results':
+            # Delete all result records for this class (students queryset)
+            ResultRecord.objects.filter(student__in=students).delete()
+            messages.success(request, 'All result records removed for this class.')
+            return redirect('class_students', grade=grade, gender=gender)
+
+        if request.POST.get('result_action') == 'edit_bulk':
+            # Expect POST keys like record_<id> => new marks value
+            from decimal import Decimal, InvalidOperation
+            edited = 0
+            for key, val in request.POST.items():
+                if not key.startswith('record_'):
+                    continue
+                try:
+                    rec_id = int(key.split('_', 1)[1])
+                except Exception:
+                    continue
+                try:
+                    record = ResultRecord.objects.select_related('student').get(pk=rec_id)
+                except ResultRecord.DoesNotExist:
+                    continue
+                # Ensure record belongs to this class/academy
+                if record.student.academy != academy or record.student.class_level != grade or record.student.gender != gender:
+                    continue
+                marks_raw = val.strip()
+                try:
+                    record.marks_obtained = Decimal(marks_raw) if marks_raw != '' else record.marks_obtained
+                    record.save()
+                    edited += 1
+                except (InvalidOperation, TypeError, ValueError):
+                    continue
+            if edited:
+                messages.success(request, f'Updated {edited} result records.')
+            else:
+                messages.info(request, 'No result records were changed.')
+            return redirect('class_students', grade=grade, gender=gender)
+
         form = StudentForm(
             request.POST,
             class_level=grade,
@@ -625,6 +662,16 @@ def class_students(request, grade, gender):
             'percentage': percentage,
         })
 
+    # Compute maximum total marks per subject to populate edit selects
+    max_total_by_subject = {}
+    for subject in result_subjects:
+        vals = [r.total_marks for r in result_records.filter(subject=subject)]
+        try:
+            max_total_by_subject[subject] = max(vals) if vals else 0
+        except Exception:
+            max_total_by_subject[subject] = 0
+    max_result_total = max(max_total_by_subject.values()) if max_total_by_subject else 0
+
     # class page should not display saved session entries; sessions are
     # displayed on the individual student's attendance page instead.
     session_entries = None
@@ -646,6 +693,8 @@ def class_students(request, grade, gender):
         'result_subject_choices': subject_choices,
         'result_columns': result_columns,
         'result_subjects': result_subjects,
+        'max_total_by_subject': max_total_by_subject,
+        'max_result_total': int(max_result_total),
         'student_results': student_results,
     })
 
