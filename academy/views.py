@@ -657,6 +657,10 @@ def class_students(request, grade, gender):
                 records_by_subject.get(subject).marks_obtained if records_by_subject.get(subject) is not None else ''
                 for subject in result_subjects
             ],
+            'subject_records': [
+                records_by_subject.get(subject) if records_by_subject.get(subject) is not None else None
+                for subject in result_subjects
+            ],
             'total_obtained': total_obtained,
             'total_marks': total_marks,
             'percentage': percentage,

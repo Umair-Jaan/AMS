@@ -281,20 +281,15 @@
                     {% for row in student_results %}
                     <tr data-student-id="{{ row.student.pk }}">
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.student.roll_no }} - {{ row.student.name }}</td>
-                        {% for i in result_subjects %}
-                        {% with record=row.records|get:i %}
+                        {% for record in row.subject_records %}
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                            <span class="record-label">{{ record.marks_obtained if record else '' }}</span>
+                            <span class="record-label">{% if record %}{{ record.marks_obtained }}{% else %}{% endif %}</span>
                             {% if record %}
                             <select name="record_{{ record.pk }}" class="record-edit-select" style="display:none; width:100%; padding:0.35rem;">
                                 <option value="">--</option>
-                                {% for n in max_result_total|add:1|make_list %}
-                                    {# build numeric options up to max_result_total #}
-                                {% endfor %}
                             </select>
                             {% endif %}
                         </td>
-                        {% endwith %}
                         {% endfor %}
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
                         <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
