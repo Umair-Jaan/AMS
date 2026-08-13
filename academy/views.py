@@ -465,6 +465,10 @@ def class_students(request, grade, gender):
             from decimal import Decimal
             date_from_raw = request.POST.get('result_from_date', '').strip()
             date_to_raw = request.POST.get('result_to_date', '').strip()
+            # Require at least one date field (From/To) to be provided so batches are identifiable
+            if not date_from_raw and not date_to_raw:
+                messages.error(request, 'Please enter From and To dates for the result batch.')
+                return redirect('class_students', grade=grade, gender=gender)
             from_label = date_from_raw
             to_label = date_to_raw
             exam_date = None
