@@ -217,6 +217,23 @@ def _handle_record_view(
     if related_name == 'result_records':
         context['result_date_range'] = result_date_range
 
+        # Build per-student record batches for student results page
+        try:
+            records_qs = records.order_by('id')
+            batches = OrderedDict()
+            for r in records_qs:
+                label = r.note if r.note else (r.exam_date.strftime('%d/%m/%Y') if r.exam_date else 'No date')
+                batches.setdefault(label, []).append(r)
+            record_batches = []
+            for label, recs in batches.items():
+                record_batches.append({
+                    'label': label,
+                    'records': recs,
+                })
+            context['record_batches'] = record_batches
+        except Exception:
+            context['record_batches'] = []
+
     if date_filter_input_name:
         context[date_filter_input_name] = date_filter_value
     return render(request, template_name, context)
@@ -561,6 +578,14 @@ def class_students(request, grade, gender):
             messages.success(request, 'All result records removed for this class.')
             return redirect('class_students', grade=grade, gender=gender)
 
+        if request.POST.get('result_action') == 'delete_batch':
+            batch_label = request.POST.get('batch_label', '').strip()
+            if batch_label:
+                # delete records for this class with this note/label
+                ResultRecord.objects.filter(student__in=students, note=batch_label).delete()
+                messages.success(request, f'Result batch "{batch_label}" removed.')
+            return redirect('class_students', grade=grade, gender=gender)
+
         if request.POST.get('result_action') == 'edit_bulk':
             # Expect POST keys like record_<id> => new marks value
             from decimal import Decimal, InvalidOperation
@@ -621,7 +646,7 @@ def class_students(request, grade, gender):
         attendance_date_input,
     )
 
-    result_records = ResultRecord.objects.filter(student__in=students).select_related('student').order_by('student__roll_no', 'subject')
+    result_records = ResultRecord.objects.filter(student__in=students).select_related('student').order_by('id')
     subject_choices = [
         'English',
         'Urdu',
@@ -636,46 +661,69 @@ def class_students(request, grade, gender):
     result_columns = range(1, 7)
 
     from decimal import Decimal
-    result_subjects = list(result_records.order_by('subject').values_list('subject', flat=True).distinct())[:6]
-    student_results = []
-    results_by_student = {}
+    # Group result records into batches by their note (From-To) or exam_date
+    from collections import OrderedDict
+    batches = OrderedDict()
     for record in result_records:
-        results_by_student.setdefault(record.student_id, []).append(record)
+        label = record.note if record.note else (record.exam_date.strftime('%d/%m/%Y') if record.exam_date else 'No date')
+        batches.setdefault(label, []).append(record)
 
-    for student in students:
-        records = results_by_student.get(student.pk)
-        if not records:
-            continue
-        records_by_subject = {record.subject: record for record in records}
-        total_obtained = sum((record.marks_obtained for record in records), Decimal('0'))
-        total_marks = sum((record.total_marks for record in records), Decimal('0'))
-        percentage = round(float(total_obtained) / float(total_marks) * 100, 1) if total_marks else 0
-        student_results.append({
-            'student': student,
-            'records': records_by_subject,
-            'subject_values': [
-                records_by_subject.get(subject).marks_obtained if records_by_subject.get(subject) is not None else ''
-                for subject in result_subjects
-            ],
-            'subject_records': [
-                records_by_subject.get(subject) if records_by_subject.get(subject) is not None else None
-                for subject in result_subjects
-            ],
-            'note': next((r.note for r in records if getattr(r, 'note', None)), ''),
-            'total_obtained': total_obtained,
-            'total_marks': total_marks,
-            'percentage': percentage,
+    result_batches = []
+    for label, records in batches.items():
+        # distinct subjects in this batch, preserving order
+        subjects = []
+        for r in records:
+            if r.subject not in subjects:
+                subjects.append(r.subject)
+
+        # build a map student_id -> records for this batch
+        records_by_student = {}
+        for r in records:
+            records_by_student.setdefault(r.student_id, []).append(r)
+
+        rows = []
+        for student in students:
+            recs = records_by_student.get(student.pk, [])
+            if not recs:
+                # include students with no records for completeness (empty values)
+                subject_values = ['' for _ in subjects]
+                total_obtained = Decimal('0')
+                total_marks = Decimal('0')
+                percentage = 0
+                note = ''
+            else:
+                recs_by_subject = {r.subject: r for r in recs}
+                subject_values = [recs_by_subject.get(sub).marks_obtained if recs_by_subject.get(sub) is not None else '' for sub in subjects]
+                total_obtained = sum((r.marks_obtained for r in recs), Decimal('0'))
+                total_marks = sum((r.total_marks for r in recs), Decimal('0'))
+                percentage = round(float(total_obtained) / float(total_marks) * 100, 1) if total_marks else 0
+                note = next((r.note for r in recs if getattr(r, 'note', None)), '')
+
+            rows.append({
+                'student': student,
+                'subject_values': subject_values,
+                'total_obtained': total_obtained,
+                'total_marks': total_marks,
+                'percentage': percentage,
+                'note': note,
+            })
+
+        result_batches.append({
+            'label': label,
+            'subjects': subjects,
+            'rows': rows,
         })
 
-    # Compute maximum total marks per subject to populate edit selects
+    # Compute maximum total marks across all records (for potential JS usage)
     max_total_by_subject = {}
-    for subject in result_subjects:
-        vals = [r.total_marks for r in result_records.filter(subject=subject)]
+    for r in result_records:
+        max_total_by_subject.setdefault(r.subject, 0)
         try:
-            max_total_by_subject[subject] = max(vals) if vals else 0
+            if r.total_marks and r.total_marks > max_total_by_subject[r.subject]:
+                max_total_by_subject[r.subject] = r.total_marks
         except Exception:
-            max_total_by_subject[subject] = 0
-    max_result_total = max(max_total_by_subject.values()) if max_total_by_subject else 0
+            pass
+    max_result_total = int(max(max_total_by_subject.values()) if max_total_by_subject else 0)
 
     # class page should not display saved session entries; sessions are
     # displayed on the individual student's attendance page instead.
@@ -697,11 +745,10 @@ def class_students(request, grade, gender):
         'result_records': result_records,
         'result_subject_choices': subject_choices,
         'result_columns': result_columns,
-        'result_subjects': result_subjects,
-        'results_date_range': result_records.exclude(note='').order_by('-id').values_list('note', flat=True).first() if result_records.exists() else '',
+        'result_batches': result_batches,
+        'results_date_range': result_batches[-1]['label'] if result_batches else '',
         'max_total_by_subject': max_total_by_subject,
         'max_result_total': int(max_result_total),
-        'student_results': student_results,
     })
 
 

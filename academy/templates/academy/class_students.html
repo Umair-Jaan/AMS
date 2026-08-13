@@ -262,53 +262,52 @@
     <div style="margin-top: 1.25rem; overflow-x:auto;">
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
             {% if student_results %}
-            {% if results_date_range %}
-            <div style="margin-bottom:0.5rem; font-weight:700;">Results date: {{ results_date_range }}</div>
-            {% endif %}
-            <table style="width:100%; border-collapse: collapse; min-width: 960px;">
-                <thead>
-                    <tr>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
-                        {% for subject in result_subjects %}
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
-                        {% endfor %}
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in student_results %}
-                    <tr data-student-id="{{ row.student.pk }}">
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                            <div>{{ row.student.roll_no }} - {{ row.student.name }}</div>
-                            {% if row.note %}
-                            <div style="font-size:0.85rem; color:var(--muted);">{{ row.note }}</div>
-                            {% endif %}
-                        </td>
-                        {% for record in row.subject_records %}
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                            <span class="record-label">{% if record %}{{ record.marks_obtained }}{% else %}{% endif %}</span>
-                        </td>
-                        {% endfor %}
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
-                            {# No per-row edit button; only table-level remove button retained below #}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center;">
-                <form method="post" id="delete_table_form" style="margin:0;">
-                    {% csrf_token %}
-                    <input type="hidden" name="result_action" value="delete_all_results" />
-                    <button type="submit" class="mini-panel delete" onclick="return confirm('Remove all saved results for this class?');">Remove table</button>
-                </form>
+            {% for batch in result_batches %}
+            <div style="margin-bottom:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                    <div style="font-weight:700;">Results: {{ batch.label }}</div>
+                    <form method="post" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="result_action" value="delete_batch" />
+                        <input type="hidden" name="batch_label" value="{{ batch.label }}" />
+                        <button type="submit" class="mini-panel delete" onclick="return confirm('Remove this result batch?');">Remove table</button>
+                    </form>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse: collapse; min-width: 960px;">
+                        <thead>
+                            <tr>
+                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
+                                {% for subject in batch.subjects %}
+                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
+                                {% endfor %}
+                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
+                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
+                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in batch.rows %}
+                            <tr>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                                    <div>{{ row.student.roll_no }} - {{ row.student.name }}</div>
+                                    {% if row.note %}
+                                    <div style="font-size:0.85rem; color:var(--muted);">{{ row.note }}</div>
+                                    {% endif %}
+                                </td>
+                                {% for val in row.subject_values %}
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ val }}</td>
+                                {% endfor %}
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
+                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            {% endfor %}
             {% else %}
             <p style="color: var(--muted);">No saved results yet.</p>
             {% endif %}
