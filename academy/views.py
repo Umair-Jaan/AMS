@@ -186,6 +186,24 @@ def _handle_record_view(
             if parsed_date is not None:
                 records = records.filter(**{date_filter_field: parsed_date})
 
+    # For result records, compute a displayable date range (From - To)
+    result_date_range = ''
+    try:
+        if related_name == 'result_records':
+            # Prefer exam_date min/max when present
+            dates_qs = records.exclude(exam_date__isnull=True).order_by('exam_date')
+            if dates_qs.exists():
+                first = dates_qs.first().exam_date
+                last = dates_qs.last().exam_date
+                result_date_range = f"{first.strftime('%d/%m/%Y')} to {last.strftime('%d/%m/%Y')}" if first and last else ''
+            else:
+                # Fall back to any note on records
+                note = records.exclude(note='').values_list('note', flat=True).first()
+                if note:
+                    result_date_range = note
+    except Exception:
+        result_date_range = ''
+
     context = {
         'student': student,
         'academy': academy,
@@ -195,6 +213,9 @@ def _handle_record_view(
         'grade': student.class_level,
         'gender': student.gender,
     }
+
+    if related_name == 'result_records':
+        context['result_date_range'] = result_date_range
 
     if date_filter_input_name:
         context[date_filter_input_name] = date_filter_value
@@ -470,17 +491,15 @@ def class_students(request, grade, gender):
                     if marks_obtained < 0:
                         continue
 
-                    defaults = {
-                        'marks_obtained': marks_obtained,
-                        'total_marks': subject_info['total_marks'],
-                        'term': 'monthly',
-                        'note': f'{from_label} to {to_label}' if from_label or to_label else '',
-                    }
-                    ResultRecord.objects.update_or_create(
+                    # Always create a new ResultRecord so previous results are retained.
+                    ResultRecord.objects.create(
                         student=student,
                         subject=subject_info['subject'],
                         exam_date=exam_date,
-                        defaults=defaults,
+                        marks_obtained=marks_obtained,
+                        total_marks=subject_info['total_marks'],
+                        term='monthly',
+                        note=f'{from_label} to {to_label}' if from_label or to_label else '',
                     )
                     saved_count += 1
 
@@ -504,6 +523,10 @@ def class_students(request, grade, gender):
                             record.total_marks = Decimal(total_raw)
                         except (TypeError, ValueError):
                             pass
+                        # Allow updating the subject if provided
+                        edit_subject = request.POST.get('edit_subject', '').strip()
+                        if edit_subject:
+                            record.subject = edit_subject
                         record.save()
                         messages.success(request, 'Result updated.')
                 except (ResultRecord.DoesNotExist, InvalidOperation):

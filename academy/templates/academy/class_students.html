@@ -260,35 +260,71 @@
     </summary>
     <div style="margin-top: 1.25rem; overflow-x:auto;">
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
-            {% if student_results %}
-            <table style="width:100%; border-collapse: collapse; min-width: 960px;">
-                <thead>
-                    <tr>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
-                        {% for subject in result_subjects %}
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
-                        {% endfor %}
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
-                        <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in student_results %}
-                    <tr>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.student.roll_no }} - {{ row.student.name }}</td>
-                        {% for value in row.subject_values %}
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ value }}</td>
-                        {% endfor %}
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
-                        <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% if result_records.exists %}
+                {% for s in students %}
+                    <div style="margin-bottom:1rem;">
+                        <div style="font-weight:700; margin-bottom:0.5rem;">{{ s.roll_no }} - {{ s.name }}</div>
+                        {% comment %} List all records for this student {% endcomment %}
+                        <table style="width:100%; border-collapse: collapse; margin-bottom:0.5rem;">
+                            <thead>
+                                <tr>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">Subject</th>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">Date</th>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">Marks</th>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">Total</th>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">%</th>
+                                    <th style="padding:0.5rem; border-bottom:1px solid var(--border); text-align:left;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in result_records %}
+                                    {% if r.student.pk == s.pk %}
+                                    <tr data-record-id="{{ r.pk }}">
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border);">
+                                            <span class="record-subject-label" data-record-id="{{ r.pk }}" style="font-weight:700; cursor:pointer;">{{ r.subject }}</span>
+                                            <select class="record-subject-select" data-record-id="{{ r.pk }}" style="display:none; margin-top:0.25rem;">
+                                                <option value="">-- select --</option>
+                                                {% for subject in result_subject_choices %}
+                                                    <option value="{{ subject }}" {% if subject == r.subject %}selected{% endif %}>{{ subject }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border);">{{ r.note|default:r.exam_date|date:"d/m/Y" }}</td>
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border);">
+                                            <span class="record-marks-label" data-record-id="{{ r.pk }}" style="font-weight:700; cursor:pointer;">{{ r.marks_obtained }}</span>
+                                            <input type="number" class="record-marks-input" data-record-id="{{ r.pk }}" value="{{ r.marks_obtained }}" style="display:none; width:6rem;" />
+                                        </td>
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border);">
+                                            <span class="record-total-label" data-record-id="{{ r.pk }}" style="font-weight:700; cursor:pointer;">{{ r.total_marks }}</span>
+                                            <input type="number" class="record-total-input" data-record-id="{{ r.pk }}" value="{{ r.total_marks }}" style="display:none; width:6rem;" />
+                                        </td>
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border);">{{ r.percentage }}%</td>
+                                        <td style="padding:0.5rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                                            <form method="post" style="display:inline-block;" class="edit-result-form">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="result_action" value="edit_result" />
+                                                <input type="hidden" name="result_id" value="{{ r.pk }}" />
+                                                <input type="hidden" name="edit_subject" class="edit-subject-hidden-{{ r.pk }}" value="" />
+                                                <input type="hidden" name="edit_marks_obtained" class="edit-marks-hidden" value="" />
+                                                <input type="hidden" name="edit_total_marks" class="edit-total-hidden" value="" />
+                                                <button type="button" class="mini-panel edit-result" data-record-id="{{ r.pk }}">Edit</button>
+                                            </form>
+                                            <form method="post" style="display:inline-block; margin-left:0.5rem;" onsubmit="return confirm('Remove this result record?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="result_action" value="delete_result" />
+                                                <input type="hidden" name="result_id" value="{{ r.pk }}" />
+                                                <button type="submit" class="mini-panel delete">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endfor %}
             {% else %}
-            <p style="color: var(--muted);">No saved results yet.</p>
+                <p style="color: var(--muted);">No saved results yet.</p>
             {% endif %}
         </div>
     </div>
@@ -629,6 +665,66 @@
 
         // No initial application of saved values; keep live status empty.
         updateTotals();
+
+        // Allow clicking saved record labels to re-open selects/inputs for editing
+        function showRecordEditors(recordId) {
+            const subjSelect = document.querySelector(`.record-subject-select[data-record-id="${recordId}"]`);
+            const subjLabel = document.querySelector(`.record-subject-label[data-record-id="${recordId}"]`);
+            const marksInput = document.querySelector(`.record-marks-input[data-record-id="${recordId}"]`);
+            const marksLabel = document.querySelector(`.record-marks-label[data-record-id="${recordId}"]`);
+            const totalInput = document.querySelector(`.record-total-input[data-record-id="${recordId}"]`);
+            const totalLabel = document.querySelector(`.record-total-label[data-record-id="${recordId}"]`);
+            if (subjSelect) subjSelect.style.display = 'block';
+            if (subjLabel) subjLabel.style.display = 'none';
+            if (marksInput) marksInput.style.display = 'inline-block';
+            if (marksLabel) marksLabel.style.display = 'none';
+            if (totalInput) totalInput.style.display = 'inline-block';
+            if (totalLabel) totalLabel.style.display = 'none';
+        }
+
+        document.querySelectorAll('.record-subject-label').forEach(function(el) {
+            el.addEventListener('click', function() {
+                showRecordEditors(el.dataset.recordId);
+            });
+        });
+        document.querySelectorAll('.record-marks-label').forEach(function(el) {
+            el.addEventListener('click', function() {
+                showRecordEditors(el.dataset.recordId);
+            });
+        });
+        document.querySelectorAll('.record-total-label').forEach(function(el) {
+            el.addEventListener('click', function() {
+                showRecordEditors(el.dataset.recordId);
+            });
+        });
+
+        document.querySelectorAll('.edit-result').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const recordId = button.dataset.recordId;
+                const form = button.closest('.edit-result-form');
+                if (!form) return;
+                const subjSelect = document.querySelector(`.record-subject-select[data-record-id="${recordId}"]`);
+                const marksInput = document.querySelector(`.record-marks-input[data-record-id="${recordId}"]`);
+                const totalInput = document.querySelector(`.record-total-input[data-record-id="${recordId}"]`);
+                const subjHidden = form.querySelector(`.edit-subject-hidden-${recordId}`);
+                const editMarksHidden = form.querySelector('.edit-marks-hidden');
+                const editTotalHidden = form.querySelector('.edit-total-hidden');
+
+                if (button.dataset.editing === 'true') {
+                    // Save: populate hidden fields and submit
+                    if (subjHidden) subjHidden.value = subjSelect ? subjSelect.value : '';
+                    if (editMarksHidden && marksInput) editMarksHidden.value = marksInput.value;
+                    if (editTotalHidden && totalInput) editTotalHidden.value = totalInput.value;
+                    form.submit();
+                    return;
+                }
+
+                // Show editors
+                showRecordEditors(recordId);
+                button.dataset.editing = 'true';
+                button.textContent = 'Save';
+            });
+        });
     })();
 </script>
 {% endblock %}
