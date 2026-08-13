@@ -249,6 +249,7 @@
         </div>
         <div style="margin-top: 1rem; display:flex; gap:1rem; flex-wrap:wrap;">
             <button type="submit" style="padding:0.75rem 1rem;">Save Results</button>
+            <button type="button" id="add_results_edit_btn" class="mini-panel" style="padding:0.75rem 1rem;">Edit</button>
         </div>
     </form>
 </details>
@@ -560,8 +561,67 @@
                 if (maxScore > 0) {
                     refreshStudentSelectsForColumn(col, maxScore);
                 }
+                enforceSubjectUniqueness();
             });
         });
+
+        function enforceSubjectUniqueness() {
+            const selects = Array.from(document.querySelectorAll('.result-subject-select'));
+            const selected = selects.map(s => s.value).filter(v => v);
+            selects.forEach(function(s) {
+                const own = s.value;
+                Array.from(s.options).forEach(function(opt) {
+                    if (!opt.value) {
+                        opt.disabled = false;
+                        return;
+                    }
+                    // disable option if selected elsewhere (and not this select's value)
+                    if (opt.value !== own && selected.includes(opt.value)) {
+                        opt.disabled = true;
+                    } else {
+                        opt.disabled = false;
+                    }
+                });
+            });
+        }
+
+        // Toggle edit mode for Add result panel: show selects for all rows
+        const addResultsEditBtn = document.getElementById('add_results_edit_btn');
+        if (addResultsEditBtn) {
+            let editing = false;
+            addResultsEditBtn.addEventListener('click', function() {
+                editing = !editing;
+                if (editing) {
+                    // show all student marks selects and subject selects for editing
+                    document.querySelectorAll('.student-result-mark-select').forEach(function(sel) { sel.style.display = 'block'; });
+                    document.querySelectorAll('.student-result-mark-label').forEach(function(lbl) { lbl.style.display = 'none'; });
+                    document.querySelectorAll('.result-subject-select').forEach(function(ss) { ss.style.display = 'block'; });
+                    document.querySelectorAll('.subject-label').forEach(function(lbl) { lbl.style.display = 'none'; });
+                    addResultsEditBtn.textContent = 'Done';
+                } else {
+                    // exit editing: hide selects that have values, show labels where appropriate
+                    document.querySelectorAll('.student-result-mark-select').forEach(function(sel) {
+                        if (sel.value !== '') {
+                            sel.style.display = 'none';
+                            const col = sel.dataset.col;
+                            const studentId = sel.dataset.studentId;
+                            const label = document.querySelector(`.student-result-mark-label[data-student-id="${studentId}"][data-col="${col}"]`);
+                            if (label) { label.textContent = sel.value; label.style.display = 'block'; }
+                        }
+                    });
+                    document.querySelectorAll('.result-subject-select').forEach(function(ss) {
+                        const col = ss.dataset.col;
+                        if (ss.value) {
+                            setSubjectColumn(col, ss.value);
+                        } else {
+                            setSubjectColumn(col, '');
+                        }
+                    });
+                    addResultsEditBtn.textContent = 'Edit';
+                }
+                enforceSubjectUniqueness();
+            });
+        }
 
         document.querySelectorAll('.result-total-marks').forEach(function(input) {
             input.addEventListener('input', function() {
