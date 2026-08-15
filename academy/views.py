@@ -613,30 +613,75 @@ def class_students(request, grade, gender):
             return redirect('class_students', grade=grade, gender=gender)
 
         if request.POST.get('result_action') == 'edit_bulk':
-            # Expect POST keys like record_<id> => new marks value
             from decimal import Decimal, InvalidOperation
             edited = 0
+            updated_ids = set()
+
+            subject_updates = {}
             for key, val in request.POST.items():
-                if not key.startswith('record_'):
-                    continue
+                if key.startswith('record_subject_'):
+                    try:
+                        rec_id = int(key.replace('record_subject_', '', 1))
+                    except (TypeError, ValueError):
+                        continue
+                    subject_value = val.strip()
+                    if subject_value:
+                        subject_updates[rec_id] = subject_value
+
+            marks_updates = {}
+            for key, val in request.POST.items():
+                if key.startswith('record_marks_'):
+                    try:
+                        rec_id = int(key.replace('record_marks_', '', 1))
+                    except (TypeError, ValueError):
+                        continue
+                    marks_updates[rec_id] = val.strip()
+
+            for key, val in request.POST.items():
+                if key.startswith('record_') and not key.startswith('record_subject_') and not key.startswith('record_marks_'):
+                    try:
+                        rec_id = int(key.replace('record_', '', 1))
+                    except (TypeError, ValueError):
+                        continue
+                    marks_updates.setdefault(rec_id, val.strip())
+
+            for key, val in request.POST.items():
+                if key.startswith('record_subject_'):
+                    try:
+                        rec_id = int(key.replace('record_subject_', '', 1))
+                    except (TypeError, ValueError):
+                        continue
+                    subject_updates.setdefault(rec_id, val.strip())
+
+            for rec_id, subject_value in subject_updates.items():
                 try:
-                    rec_id = int(key.split('_', 1)[1])
-                except Exception:
+                    record = ResultRecord.objects.select_related('student').get(pk=rec_id)
+                except ResultRecord.DoesNotExist:
+                    continue
+                if record.student.academy != academy or record.student.class_level != grade or record.student.gender != gender:
+                    continue
+                record.subject = subject_value
+                updated_ids.add(rec_id)
+                record.save()
+
+            for rec_id, marks_raw in marks_updates.items():
+                if marks_raw == '':
                     continue
                 try:
                     record = ResultRecord.objects.select_related('student').get(pk=rec_id)
                 except ResultRecord.DoesNotExist:
                     continue
-                # Ensure record belongs to this class/academy
                 if record.student.academy != academy or record.student.class_level != grade or record.student.gender != gender:
                     continue
-                marks_raw = val.strip()
                 try:
-                    record.marks_obtained = Decimal(marks_raw) if marks_raw != '' else record.marks_obtained
+                    record.marks_obtained = Decimal(marks_raw)
+                    updated_ids.add(rec_id)
                     record.save()
-                    edited += 1
                 except (InvalidOperation, TypeError, ValueError):
                     continue
+
+            edited = len(updated_ids)
+
             if edited:
                 messages.success(request, f'Updated {edited} result records.')
             else:

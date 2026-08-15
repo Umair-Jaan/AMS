@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -64,3 +65,29 @@ class ResultSavingTests(TestCase):
         response = self.client.get(reverse('class_students', args=[9, 'boys']))
 
         self.assertEqual(list(response.context['result_columns']), list(range(1, 9)))
+
+    def test_edit_bulk_updates_subject_and_marks_from_dropdown_values(self):
+        self.client.login(username='principal', password='secret123')
+        record = ResultRecord.objects.create(
+            student=self.student,
+            subject='Math',
+            exam_date=date(2026, 1, 15),
+            marks_obtained=Decimal('85'),
+            total_marks=Decimal('100'),
+            note='01/01/2026 to 01/15/2026',
+        )
+
+        response = self.client.post(
+            reverse('class_students', args=[9, 'boys']),
+            data={
+                'result_action': 'edit_bulk',
+                f'record_subject_{record.pk}': 'Chemistry',
+                f'record_marks_{record.pk}': '90',
+            },
+            follow=True,
+        )
+
+        record.refresh_from_db()
+        self.assertEqual(record.subject, 'Chemistry')
+        self.assertEqual(record.marks_obtained, Decimal('90'))
+        self.assertContains(response, 'Updated 1 result records.')

@@ -304,10 +304,19 @@
                                     {% for entry in row.subject_entries %}
                                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
                                         {% if entry.record_id %}
-                                        <span class="result-batch-mark-label" data-batch-index="{{ forloop.parentloop.parentloop.counter0 }}" data-record-id="{{ entry.record_id }}" style="display:inline;">{{ entry.marks_obtained }}</span>
-                                        <select name="record_{{ entry.record_id }}" class="result-batch-edit-select" data-batch-index="{{ forloop.parentloop.parentloop.counter0 }}" data-record-id="{{ entry.record_id }}" data-value="{{ entry.marks_obtained|floatformat:0 }}" data-max-marks="{{ entry.total_marks|default:100 }}" style="display:none; min-width:90px;">
-                                            <option value="">--</option>
-                                        </select>
+                                        <div style="display:grid; gap:0.35rem;">
+                                            <span class="result-batch-subject-label" data-record-id="{{ entry.record_id }}" style="display:inline; font-weight:600;">{{ entry.subject }}</span>
+                                            <select name="record_subject_{{ entry.record_id }}" class="result-batch-subject-select" data-record-id="{{ entry.record_id }}" data-value="{{ entry.subject }}" style="display:none; min-width:120px;">
+                                                <option value="">--</option>
+                                                {% for subject in result_subject_choices %}
+                                                <option value="{{ subject }}" {% if entry.subject == subject %}selected{% endif %}>{{ subject }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <span class="result-batch-mark-label" data-record-id="{{ entry.record_id }}" style="display:inline;">{{ entry.marks_obtained }}</span>
+                                            <select name="record_marks_{{ entry.record_id }}" class="result-batch-mark-select" data-record-id="{{ entry.record_id }}" data-value="{{ entry.marks_obtained|floatformat:0 }}" data-max-marks="{{ entry.total_marks|default:100 }}" style="display:none; min-width:90px;">
+                                                <option value="">--</option>
+                                            </select>
+                                        </div>
                                         {% else %}
                                         <span style="color:var(--muted);">-</span>
                                         {% endif %}
@@ -676,7 +685,7 @@
             });
         });
 
-        function populateBatchEditSelect(select) {
+        function populateBatchMarksSelect(select) {
             const maxMarks = Number(select.dataset.maxMarks || 100);
             const currentValue = (select.dataset.value || '').trim();
             const numericCurrent = Number(currentValue);
@@ -692,23 +701,31 @@
             }
         }
 
-        document.querySelectorAll('.result-batch-edit-select').forEach(function(select) {
-            populateBatchEditSelect(select);
+        document.querySelectorAll('.result-batch-mark-select').forEach(function(select) {
+            populateBatchMarksSelect(select);
         });
 
         document.querySelectorAll('.result-batch-edit-btn').forEach(function(button) {
             button.addEventListener('click', function() {
                 const form = button.closest('.result-batch-edit-form');
                 if (!form) return;
-                const selects = form.querySelectorAll('.result-batch-edit-select');
-                const labels = form.querySelectorAll('.result-batch-mark-label');
+                const markSelects = form.querySelectorAll('.result-batch-mark-select');
+                const subjectSelects = form.querySelectorAll('.result-batch-subject-select');
+                const markLabels = form.querySelectorAll('.result-batch-mark-label');
+                const subjectLabels = form.querySelectorAll('.result-batch-subject-label');
                 const editing = button.dataset.editing === 'true';
                 if (!editing) {
-                    selects.forEach(function(select) {
-                        populateBatchEditSelect(select);
+                    markSelects.forEach(function(select) {
+                        populateBatchMarksSelect(select);
                         select.style.display = 'inline-block';
                     });
-                    labels.forEach(function(label) {
+                    subjectSelects.forEach(function(select) {
+                        select.style.display = 'inline-block';
+                    });
+                    markLabels.forEach(function(label) {
+                        label.style.display = 'none';
+                    });
+                    subjectLabels.forEach(function(label) {
                         label.style.display = 'none';
                     });
                     button.dataset.editing = 'true';
