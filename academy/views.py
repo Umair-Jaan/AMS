@@ -713,6 +713,10 @@ def class_students(request, grade, gender):
             if not recs:
                 # include students with no records for completeness (empty values)
                 subject_values = ['' for _ in subjects]
+                subject_entries = [
+                    {'subject': sub, 'record_id': None, 'marks_obtained': '', 'total_marks': 0}
+                    for sub in subjects
+                ]
                 total_obtained = Decimal('0')
                 total_marks = Decimal('0')
                 percentage = 0
@@ -720,6 +724,15 @@ def class_students(request, grade, gender):
             else:
                 recs_by_subject = {r.subject: r for r in recs}
                 subject_values = [recs_by_subject.get(sub).marks_obtained if recs_by_subject.get(sub) is not None else '' for sub in subjects]
+                subject_entries = []
+                for sub in subjects:
+                    record = recs_by_subject.get(sub)
+                    subject_entries.append({
+                        'subject': sub,
+                        'record_id': record.pk if record else None,
+                        'marks_obtained': record.marks_obtained if record else '',
+                        'total_marks': record.total_marks if record else 0,
+                    })
                 total_obtained = sum((r.marks_obtained for r in recs), Decimal('0'))
                 total_marks = sum((r.total_marks for r in recs), Decimal('0'))
                 percentage = round(float(total_obtained) / float(total_marks) * 100, 1) if total_marks else 0
@@ -728,6 +741,7 @@ def class_students(request, grade, gender):
             rows.append({
                 'student': student,
                 'subject_values': subject_values,
+                'subject_entries': subject_entries,
                 'total_obtained': total_obtained,
                 'total_marks': total_marks,
                 'percentage': percentage,

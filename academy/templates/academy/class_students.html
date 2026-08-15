@@ -263,49 +263,65 @@
         <div class="card" style="margin:0; padding:1rem; overflow-x:auto;">
             {% if result_batches %}
             {% for batch in result_batches %}
-            <div style="margin-bottom:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                    <div style="font-weight:700;">Results: {{ batch.label }}</div>
-                    <form method="post" style="margin:0;">
-                        {% csrf_token %}
-                        <input type="hidden" name="result_action" value="delete_batch" />
-                        <input type="hidden" name="batch_label" value="{{ batch.label }}" />
-                        <button type="submit" class="mini-panel delete" onclick="return confirm('Remove this result batch?');">Remove table</button>
-                    </form>
+            <div class="result-batch-block" style="margin-bottom:1rem; padding:1rem; border:2px solid var(--border); border-top:4px solid var(--accent); border-radius:12px; background: rgba(15, 23, 42, 0.7);">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.75rem; border-bottom:2px solid var(--border); padding-bottom:0.75rem; flex-wrap:wrap;">
+                    <div style="font-weight:800; letter-spacing:0.02em;">Results: {{ batch.label }}</div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="mini-panel edit result-batch-edit-btn" data-batch-index="{{ forloop.counter0 }}">Edit table</button>
+                        <form method="post" style="margin:0; display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="result_action" value="delete_batch" />
+                            <input type="hidden" name="batch_label" value="{{ batch.label }}" />
+                            <button type="submit" class="mini-panel delete" onclick="return confirm('Remove this result batch?');">Remove table</button>
+                        </form>
+                    </div>
                 </div>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse: collapse; min-width: 960px;">
-                        <thead>
-                            <tr>
-                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
-                                {% for subject in batch.subjects %}
-                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
+                <form method="post" class="result-batch-edit-form" data-batch-index="{{ forloop.counter0 }}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="result_action" value="edit_bulk" />
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse: collapse; min-width: 960px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
+                                    {% for subject in batch.subjects %}
+                                    <th style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ subject }}</th>
+                                    {% endfor %}
+                                    <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
+                                    <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
+                                    <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in batch.rows %}
+                                <tr>
+                                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                                        <div>{{ row.student.roll_no }} - {{ row.student.name }}</div>
+                                        {% if row.note %}
+                                        <div style="font-size:0.85rem; color:var(--muted);">{{ row.note }}</div>
+                                        {% endif %}
+                                    </td>
+                                    {% for entry in row.subject_entries %}
+                                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
+                                        {% if entry.record_id %}
+                                        <span class="result-batch-mark-label" data-batch-index="{{ forloop.parentloop.parentloop.counter0 }}" data-record-id="{{ entry.record_id }}" style="display:inline;">{{ entry.marks_obtained }}</span>
+                                        <select name="record_{{ entry.record_id }}" class="result-batch-edit-select" data-batch-index="{{ forloop.parentloop.parentloop.counter0 }}" data-record-id="{{ entry.record_id }}" data-value="{{ entry.marks_obtained }}" data-max-marks="{{ entry.total_marks|default:100 }}" style="display:none; min-width:90px;">
+                                            <option value="">--</option>
+                                        </select>
+                                        {% else %}
+                                        <span style="color:var(--muted);">-</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
+                                </tr>
                                 {% endfor %}
-                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Obtained</th>
-                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Total Marks</th>
-                                <th style="padding:0.75rem; border-bottom:1px solid var(--border);">%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in batch.rows %}
-                            <tr>
-                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
-                                    <div>{{ row.student.roll_no }} - {{ row.student.name }}</div>
-                                    {% if row.note %}
-                                    <div style="font-size:0.85rem; color:var(--muted);">{{ row.note }}</div>
-                                    {% endif %}
-                                </td>
-                                {% for val in row.subject_values %}
-                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ val }}</td>
-                                {% endfor %}
-                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_obtained }}</td>
-                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.total_marks }}</td>
-                                <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ row.percentage }}%</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
             </div>
             {% endfor %}
             {% else %}
@@ -656,6 +672,48 @@
                     if (label) {
                         label.style.display = 'none';
                     }
+                }
+            });
+        });
+
+        function populateBatchEditSelect(select) {
+            const maxMarks = Number(select.dataset.maxMarks || 100);
+            const currentValue = select.dataset.value || '';
+            select.innerHTML = '<option value="">--</option>';
+            for (let i = 0; i <= maxMarks; i += 1) {
+                const option = document.createElement('option');
+                option.value = String(i);
+                option.textContent = String(i);
+                if (currentValue !== '' && String(i) === String(currentValue)) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+        }
+
+        document.querySelectorAll('.result-batch-edit-select').forEach(function(select) {
+            populateBatchEditSelect(select);
+        });
+
+        document.querySelectorAll('.result-batch-edit-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const form = button.closest('.result-batch-edit-form');
+                if (!form) return;
+                const selects = form.querySelectorAll('.result-batch-edit-select');
+                const labels = form.querySelectorAll('.result-batch-mark-label');
+                const editing = button.dataset.editing === 'true';
+                if (!editing) {
+                    selects.forEach(function(select) {
+                        populateBatchEditSelect(select);
+                        select.style.display = 'inline-block';
+                    });
+                    labels.forEach(function(label) {
+                        label.style.display = 'none';
+                    });
+                    button.dataset.editing = 'true';
+                    button.textContent = 'Save table';
+                } else {
+                    form.submit();
                 }
             });
         });
