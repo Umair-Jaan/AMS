@@ -57,3 +57,10 @@ class ResultSavingTests(TestCase):
         self.assertEqual(saved_record.marks_obtained, Decimal('85'))
         self.assertEqual(saved_record.total_marks, Decimal('100'))
         self.assertEqual(saved_record.note, '01/01/2026 to 01/15/2026')
+
+    def test_class_students_exposes_eight_result_columns(self):
+        self.client.login(username='principal', password='secret123')
+
+        response = self.client.get(reverse('class_students', args=[9, 'boys']))
+
+        self.assertEqual(list(response.context['result_columns']), list(range(1, 9)))

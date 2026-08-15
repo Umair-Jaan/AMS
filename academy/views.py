@@ -500,8 +500,8 @@ def class_students(request, grade, gender):
                     exam_date = None
 
             # Preserve column positions so marks_<studentid>_<col> maps correctly.
-            selected_subjects = [None] * 6
-            for idx in range(1, 7):
+            selected_subjects = [None] * 8
+            for idx in range(1, 9):
                 subject = request.POST.get(f'subject_{idx}', '').strip()
                 total_raw = request.POST.get(f'total_marks_{idx}', '').strip()
                 try:
@@ -684,7 +684,7 @@ def class_students(request, grade, gender):
         'Computer',
         'Economics',
     ]
-    result_columns = range(1, 7)
+    result_columns = range(1, 9)
 
     from decimal import Decimal
     # Group result records into batches by their note (From-To) or exam_date
