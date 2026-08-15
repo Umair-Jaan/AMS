@@ -519,16 +519,6 @@ def class_students(request, grade, gender):
                 messages.error(request, 'Please select at least one subject and total marks to save results.')
                 return redirect('class_students', grade=grade, gender=gender)
 
-            # Debug: show what subjects were selected and sample POST keys for first student
-            try:
-                messages.info(request, f'DEBUG selected_subjects: {selected_subjects}')
-                first_student = students.first() if hasattr(students, 'first') else (students[0] if students else None)
-                if first_student:
-                    marks_keys = {k: request.POST.get(k) for k in request.POST.keys() if k.startswith(f'marks_{first_student.pk}_')}
-                    messages.info(request, f'DEBUG marks for first student ({first_student.pk}): {marks_keys}')
-            except Exception:
-                pass
-
             saved_count = 0
             for student in students:
                 for col_idx, subject_info in enumerate(selected_subjects, 1):
