@@ -705,6 +705,22 @@
             populateBatchMarksSelect(select);
         });
 
+        function enforceBatchSubjectUniqueness(form) {
+            const selects = Array.from(form.querySelectorAll('.result-batch-subject-select'));
+            const selected = selects.map(s => s.value).filter(v => v);
+            selects.forEach(function(s) {
+                const own = s.value;
+                Array.from(s.options).forEach(function(opt) {
+                    if (!opt.value) { opt.disabled = false; return; }
+                    if (opt.value !== own && selected.includes(opt.value)) {
+                        opt.disabled = true;
+                    } else {
+                        opt.disabled = false;
+                    }
+                });
+            });
+        }
+
         document.querySelectorAll('.result-batch-edit-btn').forEach(function(button) {
             button.addEventListener('click', function() {
                 const form = button.closest('.result-batch-edit-form');
@@ -723,7 +739,6 @@
                         // if server provided a data-value, set the select to that value
                         const val = (select.dataset.value || '').trim();
                         if (val) {
-                            // try to set by value; fall back to option search
                             try { select.value = val; } catch (e) {}
                             if (select.value !== val) {
                                 Array.from(select.options).forEach(function(opt) {
@@ -732,7 +747,13 @@
                             }
                         }
                         select.style.display = 'inline-block';
+                        // attach change listener to maintain uniqueness within this batch
+                        select.addEventListener('change', function() {
+                            enforceBatchSubjectUniqueness(form);
+                        });
                     });
+                    // initialize uniqueness state
+                    enforceBatchSubjectUniqueness(form);
                     markLabels.forEach(function(label) {
                         label.style.display = 'none';
                     });
