@@ -720,6 +720,17 @@
                         select.style.display = 'inline-block';
                     });
                     subjectSelects.forEach(function(select) {
+                        // if server provided a data-value, set the select to that value
+                        const val = (select.dataset.value || '').trim();
+                        if (val) {
+                            // try to set by value; fall back to option search
+                            try { select.value = val; } catch (e) {}
+                            if (select.value !== val) {
+                                Array.from(select.options).forEach(function(opt) {
+                                    if (opt.value === val) opt.selected = true;
+                                });
+                            }
+                        }
                         select.style.display = 'inline-block';
                     });
                     markLabels.forEach(function(label) {
