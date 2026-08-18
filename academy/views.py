@@ -494,10 +494,12 @@ def class_students(request, grade, gender):
             def _parse_input(dstr):
                 if not dstr:
                     return None
-                try:
-                    return datetime.strptime(dstr, '%m/%d/%Y').date()
-                except (TypeError, ValueError):
-                    return None
+                for fmt in ('%m/%d/%Y', '%Y-%m-%d'):
+                    try:
+                        return datetime.strptime(dstr, fmt).date()
+                    except (TypeError, ValueError):
+                        continue
+                return None
 
             date_from_obj = _parse_input(date_from_raw)
             date_to_obj = _parse_input(date_to_raw)
