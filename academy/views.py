@@ -14,6 +14,8 @@ from .forms import (
     AttendanceRecordForm,
     FeeRecordForm,
     RegisterAcademyForm,
+import re
+from datetime import datetime
     ResultRecordForm,
     StudentForm,
 )
@@ -39,7 +41,23 @@ MONTH_DAYS = {
     'April': 30,
     'May': 31,
     'June': 30,
-    'July': 31,
+                # Normalize label: prefer note (which may contain a from-to range),
+                # otherwise use exam_date formatted as dd/mm/YYYY
+                if r.note:
+                    raw = r.note.strip()
+                    # Try to parse patterns like YYYY-MM-DD to YYYY-MM-DD and convert to dd/mm/YYYY to dd/mm/YYYY
+                    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})\s*(?:to|-)\s*(\d{4})-(\d{2})-(\d{2})$", raw)
+                    if m:
+                        try:
+                            d1 = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                            d2 = datetime(int(m.group(4)), int(m.group(5)), int(m.group(6)))
+                            label = f"{d1.strftime('%d/%m/%Y')} to {d2.strftime('%d/%m/%Y')}"
+                        except Exception:
+                            label = raw
+                    else:
+                        label = raw
+                else:
+                    label = (r.exam_date.strftime('%d/%m/%Y') if r.exam_date else 'No date')
     'August': 31,
     'September': 30,
     'October': 31,
