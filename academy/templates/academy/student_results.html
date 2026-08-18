@@ -36,7 +36,7 @@
             <tbody>
                 {% for batch in record_batches %}
                 <tr>
-                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.label }}</td>
+                    <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{% if batch.label %}{{ batch.label }}{% endif %}</td>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">
                         {% for r in batch.records %}
                             <div style="margin-bottom:0.25rem;"><strong>{{ r.subject }}:</strong> {{ r.marks_obtained }} / {{ r.total_marks }} ({{ r.percentage }}%)</div>

@@ -222,7 +222,7 @@ def _handle_record_view(
             records_qs = records.order_by('id')
             batches = OrderedDict()
             for r in records_qs:
-                label = r.note if r.note else (r.exam_date.strftime('%d/%m/%Y') if r.exam_date else 'No date')
+                label = r.note if r.note else (r.exam_date.strftime('%d/%m/%Y') if r.exam_date else '')
                 batches.setdefault(label, []).append(r)
             record_batches = []
             for label, recs in batches.items():
@@ -744,7 +744,7 @@ def class_students(request, grade, gender):
     from collections import OrderedDict
     batches = OrderedDict()
     for record in result_records:
-        label = record.note if record.note else (record.exam_date.strftime('%d/%m/%Y') if record.exam_date else 'No date')
+        label = record.note if record.note else (record.exam_date.strftime('%d/%m/%Y') if record.exam_date else '')
         batches.setdefault(label, []).append(record)
 
     result_batches = []
