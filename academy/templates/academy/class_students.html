@@ -330,6 +330,10 @@
                             </tbody>
                         </table>
                     </div>
+                    <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+                        <button type="submit" class="mini-panel batch-save-btn" style="display:none; padding:0.5rem 0.75rem;">Save</button>
+                        <button type="button" class="mini-panel batch-cancel-btn" style="display:none; padding:0.5rem 0.75rem;">Cancel</button>
+                    </div>
                 </form>
             </div>
             {% endfor %}
@@ -393,7 +397,8 @@
 <template id="attendance_values_data">{{ attendance_values_json|safe }}</template>
 
 <script>
-    (function() {
+    document.addEventListener('DOMContentLoaded', function() {
+    try {
         function updateTotals() {
             const rows = document.querySelectorAll('tbody tr[data-student-id]');
             let presentCount = 0;
@@ -730,6 +735,9 @@
                 const markLabels = form.querySelectorAll('.result-batch-mark-label');
                 const subjectLabels = form.querySelectorAll('.result-batch-subject-label');
                 const editing = button.dataset.editing === 'true';
+                const saveBtn = form.querySelector('.batch-save-btn');
+                const cancelBtn = form.querySelector('.batch-cancel-btn');
+
                 if (!editing) {
                     markSelects.forEach(function(select) {
                         populateBatchMarksSelect(select);
@@ -760,10 +768,43 @@
                     subjectLabels.forEach(function(label) {
                         label.style.display = 'none';
                     });
+                    // show explicit save / cancel controls
+                    if (saveBtn) saveBtn.style.display = 'inline-block';
+                    if (cancelBtn) cancelBtn.style.display = 'inline-block';
                     button.dataset.editing = 'true';
-                    button.textContent = 'Save table';
+                    button.textContent = 'Editing...';
+                    // attach cancel behavior
+                    if (cancelBtn && !cancelBtn.dataset.bound) {
+                        cancelBtn.addEventListener('click', function() {
+                            // hide selects, restore labels
+                            markSelects.forEach(function(sel) { sel.style.display = 'none'; });
+                            subjectSelects.forEach(function(sel) { sel.style.display = 'none'; });
+                            markLabels.forEach(function(label) { label.style.display = 'inline'; });
+                            subjectLabels.forEach(function(label) { label.style.display = 'inline'; });
+                            if (saveBtn) saveBtn.style.display = 'none';
+                            cancelBtn.style.display = 'none';
+                            button.dataset.editing = 'false';
+                            button.textContent = 'Edit table';
+                            // reset selects to original server-provided values
+                            subjectSelects.forEach(function(sel) {
+                                const val = (sel.dataset.value || '').trim();
+                                try { sel.value = val; } catch (e) {}
+                            });
+                            markSelects.forEach(function(sel) {
+                                const val = (sel.dataset.value || '').trim();
+                                if (val !== '') {
+                                    sel.value = val;
+                                } else {
+                                    sel.value = '';
+                                }
+                            });
+                            enforceBatchSubjectUniqueness(form);
+                        });
+                        cancelBtn.dataset.bound = 'true';
+                    }
                 } else {
-                    form.submit();
+                    // if already editing and user clicked Edit again, do nothing
+                    return;
                 }
             });
         });
@@ -879,6 +920,9 @@
         });
 
         // Removed edit-all functionality; only delete (Remove table) remains on class page.
-    })();
+    } catch (err) {
+        console.error('Error initializing class_students script', err);
+    }
+    });
 </script>
 {% endblock %}
