@@ -267,7 +267,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.75rem; border-bottom:2px solid var(--border); padding-bottom:0.75rem; flex-wrap:wrap;">
                     <div style="font-weight:800; letter-spacing:0.02em;">Results: {{ batch.label }}</div>
                     <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                        <button type="button" class="mini-panel edit result-batch-edit-btn" data-batch-index="{{ forloop.counter0 }}">Edit table</button>
+                        <!-- Edit table button removed per request -->
                         <form method="post" style="margin:0; display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="result_action" value="delete_batch" />
