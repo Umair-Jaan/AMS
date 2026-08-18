@@ -618,6 +618,10 @@ def class_students(request, grade, gender):
                 # delete records for this class with this note/label
                 ResultRecord.objects.filter(student__in=students, note=batch_label).delete()
                 messages.success(request, f'Result batch "{batch_label}" removed.')
+            else:
+                # empty label: delete records that have no note and no exam_date (legacy/empty batches)
+                ResultRecord.objects.filter(student__in=students, note='').filter(exam_date__isnull=True).delete()
+                messages.success(request, 'Result batch (no date) removed.')
             return redirect('class_students', grade=grade, gender=gender)
 
         if request.POST.get('result_action') == 'edit_bulk':
