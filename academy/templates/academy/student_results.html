@@ -46,12 +46,14 @@
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.total_marks }}</td>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border);">{{ batch.percentage }}%</td>
                     <td style="padding:0.75rem; border-bottom:1px solid var(--border); width:1px; white-space:nowrap;">
+                        {% if not readonly %}
                         {% for r in batch.records %}
                         <form method="post" action="{% url 'student_result_delete' student.pk r.pk %}" class="delete-form" onsubmit="return confirm('Remove this result record?');" style="display:inline; margin-right:0.5rem;">
                             {% csrf_token %}
                             <button type="submit" class="mini-panel delete">Remove</button>
                         </form>
                         {% endfor %}
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

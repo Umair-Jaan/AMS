@@ -490,14 +490,20 @@ def class_students(request, grade, gender):
             if not date_from_raw and not date_to_raw:
                 messages.error(request, 'Please enter From and To dates for the result batch.')
                 return redirect('class_students', grade=grade, gender=gender)
-            from_label = date_from_raw
-            to_label = date_to_raw
-            exam_date = None
-            if date_to_raw:
+            # Parse input mm/dd/YYYY into date objects and store display labels as dd/mm/YYYY
+            def _parse_input(dstr):
+                if not dstr:
+                    return None
                 try:
-                    exam_date = datetime.strptime(date_to_raw, '%m/%d/%Y').date()
+                    return datetime.strptime(dstr, '%m/%d/%Y').date()
                 except (TypeError, ValueError):
-                    exam_date = None
+                    return None
+
+            date_from_obj = _parse_input(date_from_raw)
+            date_to_obj = _parse_input(date_to_raw)
+            from_label = date_from_obj.strftime('%d/%m/%Y') if date_from_obj else ('')
+            to_label = date_to_obj.strftime('%d/%m/%Y') if date_to_obj else ('')
+            exam_date = date_to_obj
 
             # Preserve column positions so marks_<studentid>_<col> maps correctly.
             selected_subjects = [None] * 8
