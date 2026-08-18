@@ -191,8 +191,8 @@
                 </div>
             </div>
         </div>
-        <div class="card" style="margin: 0; padding: 1rem; overflow-x:auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 1120px;">
+            <div class="card" style="margin: 0; padding: 1rem; overflow-x:auto; max-width:100%;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 0;">
                 <thead>
                     <tr>
                         <th style="padding: 0.75rem; border-bottom:1px solid var(--border); text-align:left;">Roll</th>
@@ -280,7 +280,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="result_action" value="edit_bulk" />
                     <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse: collapse; min-width: 960px;">
+                        <table style="width:100%; border-collapse: collapse; min-width: 0;">
                             <thead>
                                 <tr>
                                     <th style="padding:0.75rem; border-bottom:1px solid var(--border);">Student</th>
