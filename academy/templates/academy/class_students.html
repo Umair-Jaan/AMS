@@ -3,6 +3,20 @@
 {% block title %}Class {{ grade }} — {{ gender_label }}{% endblock %}
 
 {% block content %}
+<style>
+    /* Make all detail panels equal width and centered */
+    .panel {
+        max-width: 980px;
+        width: 100%;
+        box-sizing: border-box;
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 1.5rem;
+    }
+    /* Ensure cards and tables don't force wider layouts */
+    .card { max-width: 100%; overflow-x: auto; }
+    .card table { width: 100%; min-width: 0; }
+</style>
 <a href="{% url 'class_gender_select' grade=grade %}" class="back">&larr; Class {{ grade }}</a>
 <h1>Class {{ grade }} — {{ gender_label }}</h1>
 <p class="subtitle">{{ academy.name }}</p>
